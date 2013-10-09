@@ -1,0 +1,7 @@
+{
+ "uuid": "devTools@scollins",
+ "name": "Developer's Tools",
+ "description": "A desklet for applet, desklet, and extension developers",
+ "prevent-decorations": false
+}
+

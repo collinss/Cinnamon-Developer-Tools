@@ -1,0 +1,34 @@
+.devtools-panel {
+    height: 600px;
+    width: 700px;
+}
+
+.devtools-tab {
+    padding: 4px;
+    background-color: inherit;
+    border-style: solid;
+    border-width: 2px;
+    border-color: inherit;
+    /*font-weight: bold;*/
+}
+
+.devtools-tab:selected {
+    /*background-color: #ffaaaa;*/
+    font-weight: bolder;
+}
+/*
+.devtools-terminalEntry {
+    background-color: #000000;
+}*/
+
+.devtools-tabBox {
+    
+}
+
+.devtools-panelButton {
+    
+}
+
+.devtools-refreshBox {
+    
+}

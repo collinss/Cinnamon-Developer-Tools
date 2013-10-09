@@ -1,0 +1,24 @@
+{
+    "collapsedStartState": {
+        "type": "combobox",
+        "default": 0,
+        "description": "On startup",
+        "options": {
+            "Remember Previous State": 0,
+            "Show": 1,
+            "Collapse": 2
+        }
+    },
+    
+    "collapsed": {
+        "type": "checkbox",
+        "default": true,
+        "description": "Collapsed"
+    },
+    
+    "lgOpen": {
+        "type": "checkbox",
+        "default": false,
+        "description": "Open stand-alone Looking Glass (Melange)"
+    }
+}
