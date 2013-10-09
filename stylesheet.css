@@ -9,26 +9,22 @@
     border-style: solid;
     border-width: 2px;
     border-color: inherit;
-    /*font-weight: bold;*/
 }
 
 .devtools-tab:selected {
-    /*background-color: #ffaaaa;*/
     font-weight: bolder;
 }
-/*
-.devtools-terminalEntry {
-    background-color: #000000;
-}*/
 
 .devtools-tabBox {
-    
+    padding: 3px;
+    spacing: 3px;
 }
 
 .devtools-panelButton {
-    
+    padding: 3px;
 }
 
 .devtools-refreshBox {
-    
+    padding: 3px;
+    spacin: 2px;
 }

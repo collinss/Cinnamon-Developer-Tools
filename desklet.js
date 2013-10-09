@@ -271,7 +271,7 @@ ExtensionInterface.prototype = {
                 let description = new St.Label({ text: meta.description });
                 extension.add_actor(description);
                 
-                let reload = new St.Button();
+                let reload = new St.Button({ x_align: St.Align.START });
                 extension.add_actor(reload);
                 let reloadBox = new St.BoxLayout();
                 reload.set_child(reloadBox);
@@ -284,6 +284,8 @@ ExtensionInterface.prototype = {
                 reloadBox.add_actor(reloadIcon);
                 let reloadLabelBin = new St.Bin();
                 reloadBox.add_actor(reloadLabelBin);
+                let reloadLabel = new St.Label({ text: _("Reload Code") });
+                reloadLabelBin.add_actor(reloadLabel);
                 
                 this.extensionBox.add_actor(extension);
                 
@@ -364,9 +366,6 @@ myDesklet.prototype = {
             Desklet.Desklet.prototype._init.call(this, metadata);
             
             this.setHeader(_("Tools"));
-            this._menu.addAction(_("Settings"), function() {
-                Util.spawnCommandLine("cinnamon-settings desklets " + metadata["uuid"]);
-            });
             
             this.settings = new Settings.DeskletSettings(this, metadata["uuid"], desklet_id);
             this.settings.bindProperty(Settings.BindingDirection.IN, "lgOpen", "lgOpen", function() {});
