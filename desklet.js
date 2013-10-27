@@ -25,9 +25,12 @@ const SETTINGS_PAGES = [
     { title: "Desklet Settings",     page: "desklets" },
     { title: "Extension Settings",   page: "extensions" },
     { title: "General Settings",     page: "general" },
-    { title: "Menu Settings",        page: "menu" },
     { title: "Panel Settings",       page: "panel" },
-    { title: "Theme Settings",       page: "themes" }
+    { title: "Regional Settings",    page: "region" },
+    { title: "Theme Settings",       page: "themes" },
+    { title: "Tile Settings",        page: "tiling" },
+    { title: "Window Settings",      page: "windows" },
+    { title: "Workspace Settings",   page: "workspaces" }
 ]
 
 
