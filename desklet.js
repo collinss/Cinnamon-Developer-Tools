@@ -5,6 +5,7 @@ const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
 const Tooltips = imports.ui.tooltips;
 
+const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
@@ -34,48 +35,57 @@ const SETTINGS_PAGES = [
 ]
 
 
-//function Terminal() {
-//    this._init();
-//}
-//
-//Terminal.prototype = {
-//    _init: function() {
-//        
-//        this.actor = new St.BoxLayout({ vertical: true });
-//        
-//        this.output = new St.Label();
-//        
-//        let scrollBox = new St.ScrollView();
-//        let textBox = new St.BoxLayout();
-//        textBox.add_actor(this.output);
-//        scrollBox.add_actor(textBox);
-//        this.actor.add_actor(scrollBox);
-//        
-//        let paddingBox = new St.Bin();
-//        this.actor.add_actor(paddingBox, { expand: true });
-//        
-//        this.input = new St.Entry({ style_class: "devtools-terminalEntry" });
-//        this.actor.add_actor(this.input);
-//        
-//        this.input.connect("enter_event", Lang.bind(this, this._run_input));
-//        
-//    },
-//    
-//    _run_input: function() {
-//        
-//        let input = this.input.get_text();
-//        if ( input == "" ) return;
-//        
-//        let [success, argv] = GLib.shell_parse_argv(input);
-//        
-//        let pid = {};
-//        let flags = GLib.SpawnFlags.SEARCH_PATH
-//        GLib.spawn_async_with_pipes(null, argv, null, flags, null, null, pid);
-//        
-//        //add output handling with pipes
-//        
-//    }
-//}
+function Terminal() {
+    this._init();
+}
+
+Terminal.prototype = {
+    _init: function() {
+        
+        this.actor = new St.BoxLayout({ vertical: true });
+        
+        this.output = new St.Label();
+        
+        let scrollBox = new St.ScrollView();
+        let textBox = new St.BoxLayout();
+        textBox.add_actor(this.output);
+        scrollBox.add_actor(textBox);
+        this.actor.add_actor(scrollBox);
+        
+        let paddingBox = new St.Bin();
+        this.actor.add_actor(paddingBox, { expand: true });
+        
+        this.input = new St.Entry({ style_class: "devtools-terminalEntry", track_hover: false, can_focus: true });
+        this.actor.add_actor(this.input);
+        
+        this.input.clutter_text.connect("key_press_event", Lang.bind(this, this.runInput));
+        
+    },
+    
+    runInput: function(actor, event) {
+        try {
+            
+            let symbol = event.get_key_symbol();
+            if ( !(symbol == Clutter.Return || symbol == Clutter.KP_Enter) ) return;
+            
+            global.log("worked");
+            let input = this.input.get_text();
+            this.input.text = "";
+            if ( input == "" ) return;
+            
+            let [success, argv] = GLib.shell_parse_argv(input);
+            
+            let pid = {};
+            let flags = GLib.SpawnFlags.SEARCH_PATH;
+            GLib.spawn_async_with_pipes(null, argv, null, flags, null, null, pid);
+            
+            //add output handling with pipes
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    }
+}
 
 
 function GenericInterface() {
@@ -118,29 +128,29 @@ GenericInterface.prototype = {
 }
 
 
-//function TerminalInterface(parent) {
-//    this._init(parent);
-//}
-//
-//TerminalInterface.prototype = {
-//    __proto__: GenericInterface.prototype,
-//    
-//    name: _("Run"),
-//    
-//    _init: function(parent) {
-//        
-//        try {
-//        GenericInterface.prototype._init.call(this);
-//        
-//        let terminal = new Terminal();
-//        this.panel.add_actor(terminal.actor);
-//            
-//        } catch(e) {
-//            global.logError(e);
-//        }
-//        
-//    }
-//}
+function TerminalInterface(parent) {
+    this._init(parent);
+}
+
+TerminalInterface.prototype = {
+    __proto__: GenericInterface.prototype,
+    
+    name: _("Run"),
+    
+    _init: function(parent) {
+        
+        try {
+        GenericInterface.prototype._init.call(this);
+        
+        let terminal = new Terminal();
+        this.panel.add_actor(terminal.actor);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+        
+    }
+}
 
 
 function CinnamonLogInterface(parent) {
@@ -305,7 +315,7 @@ ExtensionInterface.prototype = {
 
 let interfaces = [
     new CinnamonLogInterface(),
-    //new TerminalInterface(),
+    new TerminalInterface(),
     new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
     new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
     new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
