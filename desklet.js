@@ -399,6 +399,16 @@ myDesklet.prototype = {
             buttonArea.add_actor(csMenu.actor);
             this._populateSettingsMenu(csMenu);
             
+            //inspect button
+            let inspectButton = new St.Button({ style_class: "devtools-panelButton" });
+            buttonArea.add_actor(inspectButton);
+            file = Gio.file_new_for_path(metadata.path + "/inspect-symbolic.svg");
+            gicon = new Gio.FileIcon({ file: file });
+            let inspectIcon = new St.Icon({ gicon: gicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
+            inspectButton.set_child(inspectIcon);
+            inspectButton.connect("clicked", Lang.bind(this, this.inspect));
+            new Tooltips.Tooltip(inspectButton, _("Inspect"));
+            
             //open looking glass button
             let lgButton = new St.Button({ style_class: "devtools-panelButton" });
             let lgIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20", icon_name: "edit-find" });
@@ -463,7 +473,15 @@ myDesklet.prototype = {
         else {
             Main.createLookingGlass().open();
         }
-        
+    },
+    
+    inspect: function() {
+        if ( this.lgOpen ) {
+            Util.spawnCommandLine("cinnamon-looking-glass inspect");
+        }
+        else {
+            Main.createLookingGlass().startInspector();
+        }
     },
     
     selectTab: function(tab) {
