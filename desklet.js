@@ -118,10 +118,10 @@ GenericInterface.prototype = {
     
     setSelect: function(select) {
         if ( select ) {
-            this.panel.show();
-            this.tab.add_style_pseudo_class('selected');
             this.selected = true;
             this.onSelected();
+            this.panel.show();
+            this.tab.add_style_pseudo_class('selected');
         }
         else {
             this.panel.hide();
@@ -197,21 +197,6 @@ CinnamonLogInterface.prototype = {
         
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
-        
-        //refresh button
-        let buttonContent = new St.BoxLayout({ vertical: false, style_class: "devtools-refreshBox" });
-        let refreshIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: 20, icon_name: "view-refresh" });
-        buttonContent.add_actor(refreshIcon);
-        let refreshLabelBin = new St.Bin();
-        buttonContent.add_actor(refreshLabelBin);
-        let refreshLabel = new St.Label({ text: _("Reload") });
-        refreshLabelBin.add_actor(refreshLabel);
-        let refreshButton = new St.Button({ "toggle-mode": true });
-        refreshButton.set_child(buttonContent);
-        let buttonArea = new St.BoxLayout({ vertical: false });
-        buttonArea.add_actor(refreshButton);
-        this.panel.add_actor(buttonArea);
-        refreshButton.connect("clicked", Lang.bind(this, this.getText));
         
     },
     
