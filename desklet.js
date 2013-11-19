@@ -5,6 +5,7 @@ const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
 const Tooltips = imports.ui.tooltips;
 
+const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
@@ -19,7 +20,8 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 
 const POPUP_MENU_ICON_SIZE = 24;
-const ERROR_LOG_REFRESH_TIMEOUT = 1;
+const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
+const XSESSION_LOG_REFRESH_TIMEOUT = 10;
 
 const SETTINGS_PAGES = [
     { title: "Applet Settings",      page: "applets" },
@@ -58,6 +60,7 @@ Terminal.prototype = {
         this.input = new St.Entry({ style_class: "devtools-terminalEntry", track_hover: false, can_focus: true });
         this.actor.add_actor(this.input);
         
+        this.input.clutter_text.connect("button_press_event", Lang.bind(this, this.onButtonPress));
         this.input.clutter_text.connect("key_press_event", Lang.bind(this, this.runInput));
         
     },
@@ -81,9 +84,16 @@ Terminal.prototype = {
             
             //add output handling with pipes
             
+            
+            
+            
         } catch(e) {
             global.logError(e);
         }
+    },
+    
+    onButtonPress: function() {
+        global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
     }
 }
 
@@ -110,10 +120,13 @@ GenericInterface.prototype = {
         if ( select ) {
             this.panel.show();
             this.tab.add_style_pseudo_class('selected');
+            this.selected = true;
+            this.onSelected();
         }
         else {
             this.panel.hide();
             this.tab.remove_style_pseudo_class('selected');
+            this.selected = false;
         }
     },
     
@@ -124,6 +137,10 @@ GenericInterface.prototype = {
             + (d.getHours())+':'
             + pad(d.getMinutes())+':'
             + pad(d.getSeconds())+'  ';
+    },
+    
+    onSelected: function() {
+        //defined by individual interfaces
     }
 }
 
@@ -196,9 +213,6 @@ CinnamonLogInterface.prototype = {
         this.panel.add_actor(buttonArea);
         refreshButton.connect("clicked", Lang.bind(this, this.getText));
         
-        this.getText();
-        this.connectToLgDBus();
-        
     },
     
     connectToLgDBus: function() {
@@ -219,6 +233,9 @@ CinnamonLogInterface.prototype = {
     },
     
     getText: function() {
+        //if the tab is not shown don't waste resources on refreshing content
+        if ( !this.selected ) return;
+        
         let stack = Main._errorLogStack;
         
         let text = "";
@@ -226,13 +243,78 @@ CinnamonLogInterface.prototype = {
             let logItem = stack[i];
             text += this._formatTime(new Date(parseInt(logItem.timestamp))) + logItem.category + ':  ' + logItem.message + '\n';
         }
+        
+        //set scroll position to the end (new content shown)
         if ( this.contentText.text != text ) {
             this.contentText.text = text;
             let adjustment = this.scrollBox.get_vscroll_bar().get_adjustment();
             adjustment.value = this.contentText.height - adjustment.page_size;
-            
         }
-        Mainloop.timeout_add_seconds(ERROR_LOG_REFRESH_TIMEOUT, Lang.bind(this, this.getText));
+        
+        Mainloop.timeout_add_seconds(CINNAMON_LOG_REFRESH_TIMEOUT, Lang.bind(this, this.getText));
+    },
+    
+    onSelected: function() {
+        this.getText();
+        this.connectToLgDBus();
+    }
+}
+
+
+function XSessionLogInterface(parent) {
+    this._init(parent);
+}
+
+XSessionLogInterface.prototype = {
+    __proto__: GenericInterface.prototype,
+    
+    name: _("X-Session Log"),
+    
+    _init: function(parent) {
+        
+        GenericInterface.prototype._init.call(this);
+        
+        this.scrollBox = new St.ScrollView();
+        
+        //content text
+        this.contentText = new St.Label();
+        this.contentText.set_clip_to_allocation(false);
+        this.contentText.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this.contentText.clutter_text.line_wrap = true;
+        let textBox = new St.BoxLayout();
+        textBox.add_actor(this.contentText);
+        this.scrollBox.add_actor(textBox);
+        this.panel.add_actor(this.scrollBox);
+        
+        let paddingBox = new St.Bin();
+        this.panel.add(paddingBox, { expand: true });
+        
+    },
+    
+    getText: function() {
+        //if the tab is not shown don't waste resources on refreshing content
+        if ( !this.selected ) return;
+        
+        let file = Gio.file_new_for_path(GLib.get_home_dir() + "/.xsession-errors")
+        file.load_contents_async(null, Lang.bind(this, function(file, result) {
+            try {
+                let text = String(file.load_contents_finish(result)[1]);
+                
+                if ( this.contentText.text != text ) {
+                    this.contentText.text = text;
+                    let adjustment = this.scrollBox.get_vscroll_bar().get_adjustment();
+                    adjustment.value = this.contentText.height - adjustment.page_size;
+                }
+            } catch(e) {
+                global.logError(e);
+            }
+        }));
+        
+        Mainloop.timeout_add_seconds(XSESSION_LOG_REFRESH_TIMEOUT, Lang.bind(this, this.getText));
+    },
+    
+    onSelected: function() {
+        this.getText();
     }
 }
 
@@ -315,6 +397,7 @@ ExtensionInterface.prototype = {
 
 let interfaces = [
     new CinnamonLogInterface(),
+    new XSessionLogInterface(),
     new TerminalInterface(),
     new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
     new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
@@ -412,8 +495,8 @@ myDesklet.prototype = {
             //inspect button
             let inspectButton = new St.Button({ style_class: "devtools-panelButton" });
             buttonArea.add_actor(inspectButton);
-            file = Gio.file_new_for_path(metadata.path + "/inspect-symbolic.svg");
-            gicon = new Gio.FileIcon({ file: file });
+            let file = Gio.file_new_for_path(metadata.path + "/inspect-symbolic.svg");
+            let gicon = new Gio.FileIcon({ file: file });
             let inspectIcon = new St.Icon({ gicon: gicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
             inspectButton.set_child(inspectIcon);
             inspectButton.connect("clicked", Lang.bind(this, this.inspect));
@@ -450,14 +533,22 @@ myDesklet.prototype = {
                 this.tabBox.add_actor(tab);
                 tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
             }
+            this.contentArea.add_actor(this.tabBox);
+            
+            this.actor.connect("parent-set", Lang.bind(this, this._onDeskletAdded));
             
             this.setHideState();
-            this.contentArea.add_actor(this.tabBox);
             
             this.selectIndex(0);
             
         } catch(e) {
             global.logError(e);
+        }
+    },
+    
+    _onDeskletAdded: function() {
+        for ( let i in interfaces ) {
+            interfaces[i].onSelected();
         }
     },
     
