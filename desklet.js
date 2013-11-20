@@ -240,7 +240,7 @@ CinnamonLogInterface.prototype = {
     },
     
     onSelected: function() {
-        this.getText();
+        Mainloop.idle_add(Lang.bind(this, this.getText));
         this.connectToLgDBus();
     }
 }
