@@ -22,6 +22,7 @@ const Mainloop = imports.mainloop;
 const POPUP_MENU_ICON_SIZE = 24;
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
 const XSESSION_LOG_REFRESH_TIMEOUT = 10;
+const TERMINAL_REFRESH_TIMEOUT = 10;
 
 const SETTINGS_PAGES = [
     { title: "Applet Settings",      page: "applets" },
@@ -37,6 +38,51 @@ const SETTINGS_PAGES = [
 ]
 
 
+function Command(command, pId, inId, outId, errId, output) {
+    this._init(command, pId, inId, outId, errId, output);
+}
+
+Command.prototype = {
+    _init: function(command, pId, inId, outId, errId) {
+        this.pId = pId;
+        this.inId = inId;
+        this.outId = outId;
+        this.errId = errId;
+        
+        this.actor = new St.BoxLayout({ vertical: true });
+        
+        let commandLabel = new St.Label({ text: "Command:\n" + command + "\n\nOutput:" });
+        this.actor.add_actor(commandLabel);
+        this.output = new St.Label();
+        this.actor.add_actor(this.output);
+        
+        let separator = new PopupMenu.PopupSeparatorMenuItem();
+        this.actor.add_actor(separator.actor);
+        this.refresh();
+    },
+    
+    refresh: function() {
+        try {
+            
+            let uiStream = new Gio.UnixInputStream({ fd: this.outId });
+            let outStream = new Gio.DataInputStream({ base_stream: uiStream });
+            
+            //throw outStream.get_newline_type();
+            //while ( true ) {
+            //    let [out, size] = outStream.read_line(null);
+            //    throw this.outId;
+            //    if ( out === null ) break;
+            //    this.output.text += out + "\n";
+            //}
+            
+            Mainloop.timeout_add_seconds(TERMINAL_REFRESH_TIMEOUT, Lang.bind(this, this.refresh));
+        } catch(e) {
+            global.logError(e);
+        }
+    }
+}
+
+
 function Terminal() {
     this._init();
 }
@@ -44,52 +90,55 @@ function Terminal() {
 Terminal.prototype = {
     _init: function() {
         
+        this.processes = [];
+        
         this.actor = new St.BoxLayout({ vertical: true });
-        
-        this.output = new St.Label();
-        
-        let scrollBox = new St.ScrollView();
-        let textBox = new St.BoxLayout();
-        textBox.add_actor(this.output);
-        scrollBox.add_actor(textBox);
-        this.actor.add_actor(scrollBox);
-        
-        let paddingBox = new St.Bin();
-        this.actor.add_actor(paddingBox, { expand: true });
         
         this.input = new St.Entry({ style_class: "devtools-terminalEntry", track_hover: false, can_focus: true });
         this.actor.add_actor(this.input);
         
+        let scrollBox = new St.ScrollView();
+        this.actor.add_actor(scrollBox);
+        
+        this.output = new St.BoxLayout({ vertical: true });
+        scrollBox.add_actor(this.output);
+        
         this.input.clutter_text.connect("button_press_event", Lang.bind(this, this.onButtonPress));
-        this.input.clutter_text.connect("key_press_event", Lang.bind(this, this.runInput));
+        this.input.clutter_text.connect("key_press_event", Lang.bind(this, this.onKeyPress));
         
     },
     
-    runInput: function(actor, event) {
+    runInput: function() {
         try {
             
-            let symbol = event.get_key_symbol();
-            if ( !(symbol == Clutter.Return || symbol == Clutter.KP_Enter) ) return;
-            
-            global.log("worked");
             let input = this.input.get_text();
             this.input.text = "";
             if ( input == "" ) return;
+            input = input.replace("~/", GLib.get_home_dir() + "/"); //replace all ~/ with path to home directory
             
             let [success, argv] = GLib.shell_parse_argv(input);
             
-            let pid = {};
             let flags = GLib.SpawnFlags.SEARCH_PATH;
-            GLib.spawn_async_with_pipes(null, argv, null, flags, null, null, pid);
+            let [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
             
-            //add output handling with pipes
-            
-            
-            
+            let command = new Command(input, pId, inId, outId, errId);
+            this.output.add_actor(command.actor);
+            this.processes.push(command);
             
         } catch(e) {
             global.logError(e);
         }
+    },
+    
+    onKeyPress: function(actor, event) {
+        
+        let symbol = event.get_key_symbol();
+        if ( symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
+            this.runInput();
+            return true;
+        }
+        
+        return false;
     },
     
     onButtonPress: function() {
