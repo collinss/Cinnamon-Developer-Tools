@@ -308,6 +308,8 @@ XSessionLogInterface.prototype = {
         
         GenericInterface.prototype._init.call(this);
         
+        this.start = 0;
+        
         this.scrollBox = new St.ScrollView();
         
         //content text
@@ -323,6 +325,12 @@ XSessionLogInterface.prototype = {
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
         
+        let clearButton = new St.Button();
+        this.panel.add_actor(clearButton);
+        let clearBox = new St.BoxLayout();
+        clearButton.add_actor(clearBox);
+        clearBox.add_actor(new St.Label({ text: _("Clear") }));
+        clearButton.connect("clicked", Lang.bind(this, this.clear));
     },
     
     getText: function() {
@@ -332,7 +340,12 @@ XSessionLogInterface.prototype = {
         let file = Gio.file_new_for_path(GLib.get_home_dir() + "/.xsession-errors")
         file.load_contents_async(null, Lang.bind(this, function(file, result) {
             try {
-                let text = String(file.load_contents_finish(result)[1]);
+                let text = "";
+                let lines = String(file.load_contents_finish(result)[1]).split("\n");
+                this.end = lines.length - 1;
+                for ( let i = this.start; i < lines.length; i++ ) {
+                    text += lines[i] + "\n";
+                }
                 
                 if ( this.contentText.text != text ) {
                     this.contentText.text = text;
@@ -348,6 +361,11 @@ XSessionLogInterface.prototype = {
     },
     
     onSelected: function() {
+        this.getText();
+    },
+    
+    clear: function() {
+        this.start = this.end;
         this.getText();
     }
 }
