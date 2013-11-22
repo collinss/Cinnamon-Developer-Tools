@@ -14,7 +14,7 @@
    width="16"
    version="1.1"
    inkscape:version="0.48.4 r9939"
-   sodipodi:docname="blank symbolic icon.svg">
+   sodipodi:docname="inspect-symbolic.svg">
   <defs
      id="defs10" />
   <sodipodi:namedview
@@ -31,10 +31,10 @@
      id="namedview8"
      showgrid="false"
      inkscape:zoom="10.429825"
-     inkscape:cx="-5.5154549"
+     inkscape:cx="9.3937118"
      inkscape:cy="4.9927333"
-     inkscape:window-x="179"
-     inkscape:window-y="154"
+     inkscape:window-x="173"
+     inkscape:window-y="106"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg7384" />
   <metadata
@@ -53,7 +53,7 @@
      id="title9167">Gnome Symbolic Icon Theme</title>
   <g
      id="g3764"
-     transform="translate(0.13141764,0.04937321)">
+     transform="matrix(1.2202862,0,0,1.2202862,-1.6019225,-1.7020402)">
     <path
        inkscape:transform-center-y="-0.058925553"
        inkscape:connector-curvature="0"

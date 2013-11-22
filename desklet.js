@@ -539,7 +539,9 @@ myDesklet.prototype = {
             buttonArea.add(paddingBox, { expand: true });
             
             //cinnamon settings menu
-            let csMenuIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20", icon_name: "system-run" });
+            let setIFile = Gio.file_new_for_path(metadata.path + "/settings-symbolic.svg");
+            let setIGicon = new Gio.FileIcon({ file: setIFile });
+            let csMenuIcon = new St.Icon({ gicon: setIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
             let csMenu = new Menu(csMenuIcon, _("Cinnamon Settings"), "devtools-panelButton");
             buttonArea.add_actor(csMenu.actor);
             this._populateSettingsMenu(csMenu);
@@ -547,9 +549,9 @@ myDesklet.prototype = {
             //inspect button
             let inspectButton = new St.Button({ style_class: "devtools-panelButton" });
             buttonArea.add_actor(inspectButton);
-            let file = Gio.file_new_for_path(metadata.path + "/inspect-symbolic.svg");
-            let gicon = new Gio.FileIcon({ file: file });
-            let inspectIcon = new St.Icon({ gicon: gicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
+            let insIFile = Gio.file_new_for_path(metadata.path + "/inspect-symbolic.svg");
+            let insIGicon = new Gio.FileIcon({ file: insIFile });
+            let inspectIcon = new St.Icon({ gicon: insIGicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
             inspectButton.set_child(inspectIcon);
             inspectButton.connect("clicked", Lang.bind(this, this.inspect));
             new Tooltips.Tooltip(inspectButton, _("Inspect"));
