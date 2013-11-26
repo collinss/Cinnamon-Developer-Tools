@@ -9,11 +9,8 @@ const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const Gtk = imports.gi.Gtk;
-const GtkClutter = imports.gi.GtkClutter;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
-const Vte = imports.gi.Vte;
 
 const Util = imports.misc.util;
 const Lang = imports.lang;
@@ -133,7 +130,7 @@ Terminal.prototype = {
     onKeyPress: function(actor, event) {
         
         let symbol = event.get_key_symbol();
-        if ( symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
+        if ( symbol == Clutter.Return || symbol == Clutter.KP_Enter ) {
             this.runInput();
             return true;
         }
