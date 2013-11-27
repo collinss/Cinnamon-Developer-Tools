@@ -2,7 +2,6 @@ To-Do
 -----
     Fix bug in terminal that locks system on reading output pipe
     Implement handling of processes in terminal
-    Fork remaining icons
 
 Done
 ----
@@ -10,7 +9,11 @@ Done
     Implemented insector
     Updated settings icon
     Added xsession-errors interface
+    Fork remaining icons
 
 Wish-list
 ---------
-    More interfaces such as windows, memory, etc.
+    Open windows interface
+    Memory interface
+    Sandbox interface
+    Reload theme button

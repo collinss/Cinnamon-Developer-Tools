@@ -35,6 +35,9 @@ const SETTINGS_PAGES = [
 ]
 
 
+let button_base_path;
+
+
 function Command(command, pId, inId, outId, errId, output) {
     this._init(command, pId, inId, outId, errId, output);
 }
@@ -322,7 +325,8 @@ XSessionLogInterface.prototype = {
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
         
-        let clearButton = new St.Button();
+        //clear button
+        let clearButton = new St.Button({ style_class: "devtools-contentButton" });
         this.panel.add_actor(clearButton);
         let clearBox = new St.BoxLayout();
         clearButton.add_actor(clearBox);
@@ -415,7 +419,7 @@ ExtensionInterface.prototype = {
                 let description = new St.Label({ text: meta.description });
                 extension.add_actor(description);
                 
-                let reload = new St.Button({ x_align: St.Align.START });
+                let reload = new St.Button({ x_align: St.Align.START, style_class: "devtools-contentButton" });
                 extension.add_actor(reload);
                 let reloadBox = new St.BoxLayout();
                 reload.set_child(reloadBox);
@@ -424,7 +428,9 @@ ExtensionInterface.prototype = {
                     Extension.loadExtension(meta.uuid, this.info);
                 }));
                 
-                let reloadIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20", icon_name: "view-refresh" });
+                let file = Gio.file_new_for_path(button_base_path + "restart-symbolic.svg");
+                let gicon = new Gio.FileIcon({ file: file });
+                let reloadIcon = new St.Icon({ gicon: gicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
                 reloadBox.add_actor(reloadIcon);
                 let reloadLabelBin = new St.Bin();
                 reloadBox.add_actor(reloadLabelBin);
@@ -440,6 +446,10 @@ ExtensionInterface.prototype = {
         } catch(e) {
             global.logError(e);
         }
+    },
+    
+    onSelected: function() {
+        Mainloop.idle_add(Lang.bind(this, this.reload));
     }
 }
 
@@ -508,99 +518,102 @@ myDesklet.prototype = {
     _init: function(metadata, desklet_id) {
         try {
             
-            Desklet.Desklet.prototype._init.call(this, metadata);
+            Desklet.Desklet.prototype._init.call(this, metadata, desklet_id);
             
-            this.setHeader(_("Tools"));
+            button_base_path = this.metadata.path + "/buttons/";
+            this._bindSettings();
             
-            this.settings = new Settings.DeskletSettings(this, metadata["uuid"], desklet_id);
-            this.settings.bindProperty(Settings.BindingDirection.IN, "lgOpen", "lgOpen", function() {});
-            this.settings.bindProperty(Settings.BindingDirection.IN, "collapsedStartState", "collapsedStartState", function() {});
-            this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, "collapsed", "collapsed", this.setHideState);
-            
-            let mainBox = new St.BoxLayout({ vertical: true });
+            let mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
             this.setContent(mainBox);
-            let buttonArea = new St.BoxLayout({ vertical: false });
-            
-            //collapse button
-            this.collapseButton = new St.Button({ style_class: "devtools-panelButton" });
-            this.collapseIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
-            this.collapseButton.set_child(this.collapseIcon);
-            buttonArea.add_actor(this.collapseButton);
-            this.collapseButton.connect("clicked", Lang.bind(this, this.toggleCollapse));
-            this.collapseTooltip = new Tooltips.Tooltip(this.collapseButton);
-            
-            if ( this.collapsedStartState == 1 ) this.collapsed = false;
-            else if ( this.collapsedStartState == 2 ) this.collapsed = true;
-            
-            let paddingBox = new St.Bin();
-            buttonArea.add(paddingBox, { expand: true });
-            
-            //cinnamon settings menu
-            let setIFile = Gio.file_new_for_path(metadata.path + "/settings-symbolic.svg");
-            let setIGicon = new Gio.FileIcon({ file: setIFile });
-            let csMenuIcon = new St.Icon({ gicon: setIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
-            let csMenu = new Menu(csMenuIcon, _("Cinnamon Settings"), "devtools-panelButton");
-            buttonArea.add_actor(csMenu.actor);
-            this._populateSettingsMenu(csMenu);
-            
-            //inspect button
-            let inspectButton = new St.Button({ style_class: "devtools-panelButton" });
-            buttonArea.add_actor(inspectButton);
-            let insIFile = Gio.file_new_for_path(metadata.path + "/inspect-symbolic.svg");
-            let insIGicon = new Gio.FileIcon({ file: insIFile });
-            let inspectIcon = new St.Icon({ gicon: insIGicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
-            inspectButton.set_child(inspectIcon);
-            inspectButton.connect("clicked", Lang.bind(this, this.inspect));
-            new Tooltips.Tooltip(inspectButton, _("Inspect"));
-            
-            //open looking glass button
-            let lgButton = new St.Button({ style_class: "devtools-panelButton" });
-            let lgIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20", icon_name: "edit-find" });
-            lgButton.set_child(lgIcon);
-            buttonArea.add_actor(lgButton);
-            lgButton.connect("clicked", Lang.bind(this, this.launchLookingGlass));
-            new Tooltips.Tooltip(lgButton, _("Open Looking Glass"));
-            
-            //restart button
-            let restartButton = new St.Button({ style_class: "devtools-panelButton" });
-            let restartIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20", icon_name: "view-refresh" });
-            restartButton.set_child(restartIcon);
-            buttonArea.add_actor(restartButton);
-            restartButton.connect("clicked", Lang.bind(this, function() {
-                global.reexec_self();
-            }));
-            new Tooltips.Tooltip(restartButton, _("Restart Cinnamon"));
-            
-            mainBox.add_actor(buttonArea);
-            
+            this.buttonArea = new St.BoxLayout({ vertical: false, style_class: "devtools-buttonArea" });
+            mainBox.add_actor(this.buttonArea);
             this.contentArea = new St.BoxLayout({ vertical: true });
             mainBox.add_actor(this.contentArea);
             
-            //load tabs
-            this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
-            for ( let i in interfaces ) {
-                this.contentArea.add_actor(interfaces[i].panel);
-                let tab = interfaces[i].tab;
-                this.tabBox.add_actor(tab);
-                tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
-            }
-            this.contentArea.add_actor(this.tabBox);
-            
-            this.actor.connect("parent-set", Lang.bind(this, this._onDeskletAdded));
-            
+            this.addButtons();
+            this.addContent();
             this.setHideState();
-            
             this.selectIndex(0);
+            
+            this.setHeader(_("Tools"));
             
         } catch(e) {
             global.logError(e);
         }
     },
     
-    _onDeskletAdded: function() {
+    _bindSettings: function() {
+        this.settings = new Settings.DeskletSettings(this, this.metadata.uuid, this.instance_id);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "lgOpen", "lgOpen", function() {});
+        this.settings.bindProperty(Settings.BindingDirection.IN, "collapsedStartState", "collapsedStartState", function() {});
+        this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, "collapsed", "collapsed", this.setHideState);
+    },
+    
+    addButtons: function() {
+        //collapse button
+        this.collapseButton = new St.Button({ style_class: "devtools-button" });
+        this.buttonArea.add_actor(this.collapseButton);
+        this.collapseIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        this.collapseButton.set_child(this.collapseIcon);
+        this.collapseButton.connect("clicked", Lang.bind(this, this.toggleCollapse));
+        this.collapseTooltip = new Tooltips.Tooltip(this.collapseButton);
+        
+        if ( this.collapsedStartState == 1 ) this.collapsed = false;
+        else if ( this.collapsedStartState == 2 ) this.collapsed = true;
+        
+        let paddingBox = new St.Bin();
+        this.buttonArea.add(paddingBox, { expand: true });
+        
+        //cinnamon settings menu
+        let setIFile = Gio.file_new_for_path(button_base_path + "settings-symbolic.svg");
+        let setIGicon = new Gio.FileIcon({ file: setIFile });
+        let csMenuIcon = new St.Icon({ gicon: setIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        let csMenu = new Menu(csMenuIcon, _("Cinnamon Settings"), "devtools-button");
+        this.buttonArea.add_actor(csMenu.actor);
+        this._populateSettingsMenu(csMenu);
+        
+        //inspect button
+        let inspectButton = new St.Button({ style_class: "devtools-button" });
+        this.buttonArea.add_actor(inspectButton);
+        let insIFile = Gio.file_new_for_path(button_base_path + "inspect-symbolic.svg");
+        let insIGicon = new Gio.FileIcon({ file: insIFile });
+        let inspectIcon = new St.Icon({ gicon: insIGicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
+        inspectButton.set_child(inspectIcon);
+        inspectButton.connect("clicked", Lang.bind(this, this.inspect));
+        new Tooltips.Tooltip(inspectButton, _("Inspect"));
+        
+        //open looking glass button
+        let lgButton = new St.Button({ style_class: "devtools-button" });
+        let lgIFile = Gio.file_new_for_path(button_base_path + "lg-symbolic.svg");
+        let lgIGicon = new Gio.FileIcon({ file: lgIFile });
+        let lgIcon = new St.Icon({ gicon: lgIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        lgButton.set_child(lgIcon);
+        this.buttonArea.add_actor(lgButton);
+        lgButton.connect("clicked", Lang.bind(this, this.launchLookingGlass));
+        new Tooltips.Tooltip(lgButton, _("Open Looking Glass"));
+        
+        //restart button
+        let restartButton = new St.Button({ style_class: "devtools-button" });
+        let restartIFile = Gio.file_new_for_path(button_base_path + "restart-symbolic.svg");
+        let restartIGicon = new Gio.FileIcon({ file: restartIFile });
+        let restartIcon = new St.Icon({ gicon: restartIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        restartButton.set_child(restartIcon);
+        this.buttonArea.add_actor(restartButton);
+        restartButton.connect("clicked", Lang.bind(this, function() {
+            global.reexec_self();
+        }));
+        new Tooltips.Tooltip(restartButton, _("Restart Cinnamon"));
+    },
+    
+    addContent: function() {
+        this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
         for ( let i in interfaces ) {
-            interfaces[i].onSelected();
+            this.contentArea.add_actor(interfaces[i].panel);
+            let tab = interfaces[i].tab;
+            this.tabBox.add_actor(tab);
+            tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
         }
+        this.contentArea.add_actor(this.tabBox);
     },
     
     _populateSettingsMenu: function(menu) {
@@ -656,16 +669,19 @@ myDesklet.prototype = {
     },
     
     setHideState: function(event) {
+        let file;
         if ( this.collapsed ) {
-            this.collapseIcon.icon_name = "list-add";
+            file = Gio.file_new_for_path(button_base_path + "add-symbolic.svg");
             this.collapseTooltip.set_text(_("Expand"));
             this.contentArea.hide();
         }
         else {
-            this.collapseIcon.icon_name = "list-remove";
+            file = Gio.file_new_for_path(button_base_path + "remove-symbolic.svg");
             this.collapseTooltip.set_text(_("Collapse"));
             this.contentArea.show();
         }
+        let gicon = new Gio.FileIcon({ file: file });
+        this.collapseIcon.gicon = gicon;
     },
     
     toggleCollapse: function() {
