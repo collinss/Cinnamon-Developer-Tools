@@ -3,12 +3,12 @@
     width: 700px;
 }
 
+.devtools-button {
+    padding: 3px;
+}
+
 .devtools-tab {
     padding: 4px;
-    background-color: inherit;
-    border-style: solid;
-    border-width: 2px;
-    border-color: inherit;
 }
 
 .devtools-tab:selected {
@@ -29,6 +29,30 @@
     spacin: 2px;
 }
 
-.devtools-terminalEntry {
+.devtools-extension-mainBox {
+    
+}
+
+.devtools-extension-container {
+    
+}
+
+.devtools-terminal-entry {
     background-color: #ffffff;
+    color: #000000;
+}
+
+.devtools-terminal-processMainBox {
+    
+}
+
+.devtools-terminal-processBox {
+    
+}
+
+.devtools-separator {
+    /*uncomment these lines to make separators disapear*/
+    /*-gradient-height: 0px;*/
+    /*-margin-horizontal: 0px;*/
+    /*height: 0px;*/
 }

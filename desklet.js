@@ -49,18 +49,15 @@ Command.prototype = {
         this.outId = outId;
         this.errId = errId;
         
-        this.actor = new St.BoxLayout({ vertical: true });
+        this.actor = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processBox" });
         
-        let commandLabel = new St.Label({ text: "Command: " + command });
+        let commandLabel = new St.Label({ text: "Command:    " + command });
         this.actor.add_actor(commandLabel);
-        this.status = new St.Label({ text: "Status: " + "Running" });
+        this.status = new St.Label({ text:      "Status:     " + "Running" });
         this.actor.add_actor(this.status);
         this.actor.add_actor(new St.Label({ text: "Output: " }));
         this.output = new St.Label();
         this.actor.add_actor(this.output);
-        
-        let separator = new PopupMenu.PopupSeparatorMenuItem();
-        this.actor.add_actor(separator.actor);
         
         let uiStream = new Gio.UnixInputStream({ fd: this.outId });
         this.input = new Gio.DataInputStream({ base_stream: uiStream });
@@ -95,13 +92,13 @@ Terminal.prototype = {
         
         this.actor = new St.BoxLayout({ vertical: true });
         
-        this.input = new St.Entry({ style_class: "devtools-terminalEntry", track_hover: false, can_focus: true });
+        this.input = new St.Entry({ style_class: "devtools-terminal-entry", track_hover: false, can_focus: true });
         this.actor.add_actor(this.input);
         
         let scrollBox = new St.ScrollView();
         this.actor.add_actor(scrollBox);
         
-        this.output = new St.BoxLayout({ vertical: true });
+        this.output = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processMainBox" });
         scrollBox.add_actor(this.output);
         
         this.input.clutter_text.connect("button_press_event", Lang.bind(this, this.onButtonPress));
@@ -121,6 +118,13 @@ Terminal.prototype = {
             
             let flags = GLib.SpawnFlags.SEARCH_PATH;
             let [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
+            
+            if ( this.output.get_children().length > 0 ) {
+                let separator = new PopupMenu.PopupSeparatorMenuItem();
+                this.output.add_actor(separator.actor);
+                separator.actor.remove_style_class_name("popup-menu-item");
+                separator._drawingArea.add_style_class_name("devtools-separator");
+            }
             
             let command = new Command(input, pId, inId, outId, errId);
             this.output.add_actor(command.actor);
@@ -390,7 +394,7 @@ ExtensionInterface.prototype = {
             let scrollBox = new St.ScrollView();
             this.panel.add_actor(scrollBox);
             
-            this.extensionBox = new St.BoxLayout({ vertical: true });
+            this.extensionBox = new St.BoxLayout({ vertical: true, style_class: "devtools-extension-mainBox" });
             scrollBox.add_actor(this.extensionBox);
             
             this.info.connect("extension-loaded", Lang.bind(this, this.reload));
@@ -407,21 +411,31 @@ ExtensionInterface.prototype = {
         try {
             this.extensionBox.destroy_all_children();
             
+            let hasChild = false;
             for ( let uuid in Extension.meta ) {
                 let meta = Extension.meta[uuid];
                 if ( !meta.name ) continue;
                 if ( !Extension.objects[uuid] ) continue;
                 if ( Extension.objects[uuid].type.name != this.info.name ) continue;
                 
-                let extension = new St.BoxLayout({ vertical: true });
+                if ( hasChild ) {
+                    let separator = new PopupMenu.PopupSeparatorMenuItem();
+                    this.extensionBox.add_actor(separator.actor);
+                    separator.actor.remove_style_class_name("popup-menu-item");
+                    separator._drawingArea.add_style_class_name("devtools-separator");
+                }
+                
+                let extension = new St.BoxLayout({ vertical: true, style_class: "devtools-extension-container" });
                 let name = new St.Label({ text: meta.name });
                 extension.add_actor(name);
                 
                 let description = new St.Label({ text: meta.description });
                 extension.add_actor(description);
                 
-                let reload = new St.Button({ x_align: St.Align.START, style_class: "devtools-contentButton" });
-                extension.add_actor(reload);
+                let commandBox = new St.BoxLayout();
+                extension.add_actor(commandBox);
+                let reload = new St.Button({ x_align: St.Align.START, x_fill: false, x_expand: false, style_class: "devtools-contentButton" });
+                commandBox.add_actor(reload);
                 let reloadBox = new St.BoxLayout();
                 reload.set_child(reloadBox);
                 reload.connect("clicked", Lang.bind(this, function() {
@@ -439,9 +453,7 @@ ExtensionInterface.prototype = {
                 reloadLabelBin.add_actor(reloadLabel);
                 
                 this.extensionBox.add_actor(extension);
-                
-                let separator = new PopupMenu.PopupSeparatorMenuItem();
-                this.extensionBox.add_actor(separator.actor);
+                hasChild = true;
             }
             
         } catch(e) {
