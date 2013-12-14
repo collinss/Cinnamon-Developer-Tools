@@ -51,33 +51,34 @@ Command.prototype = {
         
         this.actor = new St.BoxLayout({ vertical: true });
         
-        let commandLabel = new St.Label({ text: "Command:\n" + command + "\n\nOutput:" });
+        let commandLabel = new St.Label({ text: "Command: " + command });
         this.actor.add_actor(commandLabel);
+        this.status = new St.Label({ text: "Status: " + "Running" });
+        this.actor.add_actor(this.status);
+        this.actor.add_actor(new St.Label({ text: "Output: " }));
         this.output = new St.Label();
         this.actor.add_actor(this.output);
         
         let separator = new PopupMenu.PopupSeparatorMenuItem();
         this.actor.add_actor(separator.actor);
-        this.refresh();
+        
+        let uiStream = new Gio.UnixInputStream({ fd: this.outId });
+        this.input = new Gio.DataInputStream({ base_stream: uiStream });
+        Mainloop.idle_add(Lang.bind(this, this.readNext));
     },
     
-    refresh: function() {
-        try {
-            
-            let uiStream = new Gio.UnixInputStream({ fd: this.outId });
-            let outStream = new Gio.DataInputStream({ base_stream: uiStream });
-            
-            //throw outStream.get_newline_type();
-            //while ( true ) {
-            //    let [out, size] = outStream.read_line(null);
-            //    throw this.outId;
-            //    if ( out === null ) break;
-            //    this.output.text += out + "\n";
-            //}
-            
-            Mainloop.timeout_add_seconds(TERMINAL_REFRESH_TIMEOUT, Lang.bind(this, this.refresh));
-        } catch(e) {
-            global.logError(e);
+    readNext: function() {
+        this.input.read_line_async(0, null, Lang.bind(this, this.finishRead));
+    },
+    
+    finishRead: function(stream, res) {
+        let [out, size] = stream.read_line_finish(res);
+        if ( out ) {
+            this.output.text += out + "\n";
+            this.readNext();
+        }
+        else {
+            this.status.text = "Status: " + "Stopped";
         }
     }
 }

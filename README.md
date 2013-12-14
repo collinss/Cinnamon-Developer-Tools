@@ -1,7 +1,7 @@
 To-Do
 -----
-    Fix bug in terminal that locks system on reading output pipe
     Implement handling of processes in terminal
+    Implement raise to top
 
 Done
 ----
@@ -10,6 +10,7 @@ Done
     Updated settings icon
     Added xsession-errors interface
     Fork remaining icons
+    Fix bug in terminal that locks system on reading output pipe
 
 Wish-list
 ---------
