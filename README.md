@@ -1,7 +1,8 @@
 To-Do
 -----
-    Implement handling of processes in terminal
     Implement raise to top
+    Double-check theme asthetics
+    Input handling in terminal
 
 Done
 ----
@@ -11,6 +12,7 @@ Done
     Added xsession-errors interface
     Fork remaining icons
     Fix bug in terminal that locks system on reading output pipe
+    Implement handling of processes in terminal
 
 Wish-list
 ---------

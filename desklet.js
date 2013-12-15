@@ -36,6 +36,46 @@ const SETTINGS_PAGES = [
 
 
 let button_base_path;
+let command_output_start_state;
+
+
+function CollapseButton(label, startState, callback) {
+    this._init(label, startState, callback);
+}
+
+CollapseButton.prototype = {
+    _init: function(label, startState, callback) {
+        this.state = startState;
+        this.callback = callback;
+        
+        this.actor = new St.Button({ x_expand: false, x_fill: false, style_class: "devtools-contentButton" });
+        let buttonBox = new St.BoxLayout();
+        this.actor.set_child(buttonBox);
+        buttonBox.add_actor(new St.Label({ text: label }));
+        
+        this.arrowIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: 8, style: "padding: 4px;" });
+        buttonBox.add_actor(this.arrowIcon);
+        this._updateIcon();
+        
+        this.actor.connect("clicked", Lang.bind(this, this._onButtonClicked));
+    },
+    
+    _onButtonClicked: function() {
+        if ( this.state ) this.state = false;
+        else this.state = true;
+        this._updateIcon();
+        this.callback(this.state);
+    },
+    
+    _updateIcon: function() {
+        let path;
+        if ( this.state ) path = button_base_path + "open-symbolic.svg";
+        else path = button_base_path + "closed-symbolic.svg";
+        let file = Gio.file_new_for_path(path);
+        let gicon = new Gio.FileIcon({ file: file });
+        this.arrowIcon.gicon = gicon;
+    }
+}
 
 
 function Command(command, pId, inId, outId, errId, output) {
@@ -51,14 +91,56 @@ Command.prototype = {
         
         this.actor = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processBox" });
         
-        let commandLabel = new St.Label({ text: "Command:    " + command });
-        this.actor.add_actor(commandLabel);
-        this.status = new St.Label({ text:      "Status:     " + "Running" });
-        this.actor.add_actor(this.status);
-        this.actor.add_actor(new St.Label({ text: "Output: " }));
-        this.output = new St.Label();
-        this.actor.add_actor(this.output);
+        //header
+        let headerBox = new St.BoxLayout();
+        this.actor.add_actor(headerBox);
+        let infoBox = new St.BoxLayout({ vertical: true });
+        headerBox.add(infoBox, { expand: true });
+        let toolBox = new St.BoxLayout({ vertical: true });
+        headerBox.add_actor(toolBox);
         
+        //command
+        let commandBox = new St.BoxLayout();
+        infoBox.add_actor(commandBox);
+        commandBox.add_actor(new St.Label({ text: "Command: ", width: 100 }));
+        let commandLabel = new St.Label({ text: command });
+        commandBox.add_actor(commandLabel);
+        
+        //status
+        let statusBox = new St.BoxLayout();
+        infoBox.add_actor(statusBox);
+        statusBox.add_actor(new St.Label({ text: "Status: ", width: 100 }));
+        this.status = new St.Label({ text: "Running" });
+        statusBox.add_actor(this.status);
+        
+        //clear button
+        let clearButton = new St.Button({ label: "Clear", style_class: "devtools-contentButton" });
+        toolBox.add_actor(clearButton);
+        clearButton.connect("clicked", Lang.bind(this, this.clear));
+        
+        //end process button
+        this.stopButton = new St.Button({ label: "End Process", style_class: "devtools-contentButton" });
+        toolBox.add_actor(this.stopButton);
+        this.stopButton.connect("clicked", Lang.bind(this, this.endProcess));
+        
+        //output toggle
+        let toggleBox = new St.BoxLayout();
+        this.actor.add_actor(toggleBox);
+        this.showOutput = command_output_start_state;
+        let outputButton = new CollapseButton("Output", command_output_start_state, Lang.bind(this, function(openState){
+            if ( openState ) this.output.show();
+            else this.output.hide();
+        }));
+        toggleBox.add_actor(outputButton.actor);
+        
+        //output
+        this.output = new St.Label();
+        if ( !this.showOutput ) this.output.hide();
+        this.actor.add_actor(this.output);
+        this.output.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this.output.clutter_text.line_wrap = true;
+        
+        //open streams and start reading
         let uiStream = new Gio.UnixInputStream({ fd: this.outId });
         this.input = new Gio.DataInputStream({ base_stream: uiStream });
         Mainloop.idle_add(Lang.bind(this, this.readNext));
@@ -75,8 +157,19 @@ Command.prototype = {
             this.readNext();
         }
         else {
-            this.status.text = "Status: " + "Stopped";
+            this.status.text = "Stopped";
+            this.stopButton.hide();
+            this.closed = true;
         }
+    },
+    
+    endProcess: function() {
+        Util.spawnCommandLine("kill " + this.pId);
+    },
+    
+    clear: function() {
+        this.actor.destroy();
+        this.delete();
     }
 }
 
@@ -560,6 +653,10 @@ myDesklet.prototype = {
         this.settings.bindProperty(Settings.BindingDirection.IN, "lgOpen", "lgOpen", function() {});
         this.settings.bindProperty(Settings.BindingDirection.IN, "collapsedStartState", "collapsedStartState", function() {});
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, "collapsed", "collapsed", this.setHideState);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "terminalOutputShow", "terminalOutputShow", function() {
+            command_output_start_state = this.terminalOutputShow;
+        });
+        command_output_start_state = this.terminalOutputShow;
     },
     
     addButtons: function() {

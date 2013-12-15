@@ -20,5 +20,12 @@
         "type": "checkbox",
         "default": false,
         "description": "Open stand-alone Looking Glass (Melange)"
+    },
+    
+    "terminalOutputShow": {
+        "type": "checkbox",
+        "description": "Show process output on run",
+        "default": true,
+        "tooltip": "Uncheck to have it hidden initially"
     }
 }
