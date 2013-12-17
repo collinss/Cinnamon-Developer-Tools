@@ -41,6 +41,76 @@ let command_output_start_state;
 let desklet_raised = false;
 
 
+function Window(window) {
+    this._init(window);
+}
+
+Window.prototype = {
+    _init: function(window) {
+        
+        this.window = window;
+        
+        this.actor = new St.BoxLayout({ vertical: true, style_class: "devtools-windows-windowBox" });
+        
+        let titleBox = new St.BoxLayout();
+        this.actor.add_actor(titleBox);
+        titleBox.add_actor(new St.Label({ text: "Title: ", width: 100 }));
+        let title = new St.Label({ text: window.title, style_class: "devtools-windows-title" });
+        titleBox.add_actor(title);
+        
+        let classBox = new St.BoxLayout();
+        this.actor.add_actor(classBox);
+        classBox.add_actor(new St.Label({ text: "Class: ", width: 100 }));
+        let wmClass = new St.Label({ text: window.get_wm_class() });
+        classBox.add_actor(wmClass);
+        
+        
+        
+        //let tracker = Cinnamon.WindowTracker.get_default();
+            // Avoid multiple connections
+            //if (!window._lookingGlassManaged) {
+            //    window.connect("unmanaged", Lang.bind(this, this._updateWindowList));
+            //    window._lookingGlassManaged = true;
+            //    
+            //    window._lgId = this.lastId;
+            //    this.lastId++;
+            //}
+            //
+            //let lgInfo = { id: window._lgId.toString(), title: window.title, wmclass: window.get_wm_class(), app: ""};
+            //
+            //let box = new St.BoxLayout({ vertical: true });
+            //this.actor.add(box);
+            //let propsBox = new St.BoxLayout({ vertical: true, style: "padding-left: 6px;" });
+            //box.add(propsBox);
+            //let app = tracker.get_window_app(window);
+            //if (app != null && !app.is_window_backed()) {
+            //    let icon = app.create_icon_texture(22);
+            //    let propBox = new St.BoxLayout({ style: "spacing: 6px; " });
+            //    propsBox.add(propBox);
+            //    propBox.add(new St.Label({ text: "app: " }), { y_fill: false });
+            //    let appLink = new ObjLink(app, app.get_id());
+            //    propBox.add(appLink.actor, { y_fill: false });
+            //    propBox.add(icon, { y_fill: false });
+            //    
+            //    lgInfo.app = app.get_id();
+            //} else {
+            //    propsBox.add(new St.Label({ text: "<untracked>" }));
+            //    
+            //    lgInfo.app = "<untracked>";
+            //}
+            //
+            //// Ignore menus
+            //let wtype = window.get_window_type();
+            //if(wtype != Meta.WindowType.MENU && wtype != Meta.WindowType.DROPDOWN_MENU && wtype != Meta.WindowType.POPUP_MENU)
+            //    this.latestWindowList.push(lgInfo);
+    },
+    
+    destroy: function() {
+        this.actor.destroy();
+    }
+}
+
+
 function CollapseButton(label, startState, callback) {
     this._init(label, startState, callback);
 }
@@ -270,26 +340,83 @@ GenericInterface.prototype = {
             this.selected = true;
             this.onSelected();
             this.panel.show();
-            this.tab.add_style_pseudo_class('selected');
+            this.tab.add_style_pseudo_class("selected");
         }
         else {
             this.panel.hide();
-            this.tab.remove_style_pseudo_class('selected');
+            this.tab.remove_style_pseudo_class("selected");
             this.selected = false;
         }
     },
     
     _formatTime: function(d){
-        function pad(n) { return n < 10 ? '0' + n : n; }
-        return (d.getMonth()+1)+'/'
-            + pad(d.getDate())+' '
-            + (d.getHours())+':'
-            + pad(d.getMinutes())+':'
-            + pad(d.getSeconds())+'  ';
+        function pad(n) { return n < 10 ? "0" + n : n; }
+        return (d.getMonth()+1)+"/"
+            + pad(d.getDate())+" "
+            + (d.getHours())+":"
+            + pad(d.getMinutes())+":"
+            + pad(d.getSeconds())+"  ";
     },
     
     onSelected: function() {
         //defined by individual interfaces
+    }
+}
+
+
+function WindowInterface(parent) {
+    this._init(parent);
+}
+
+WindowInterface.prototype = {
+    __proto__: GenericInterface.prototype,
+    
+    name: _("Windows"),
+    
+    _init: function(parent) {
+        
+        GenericInterface.prototype._init.call(this);
+        
+        this.windowObjects = [];
+        let tracker = Cinnamon.WindowTracker.get_default();
+        
+        global.display.connect("window-created", Lang.bind(this, this.refresh));
+        tracker.connect("tracked-windows-changed", Lang.bind(this, this.refresh));
+        
+        this.windowsBox = new St.BoxLayout({ vertical: true, style_class: "devtools-windows-mainBox" });
+        this.panel.add_actor(this.windowsBox);
+        
+    },
+    
+    refresh: function() {
+        if ( !this.selected ) return;
+        
+        for ( let i = 0; i < this.windowObjects.length; i++ ) {
+            this.windowObjects[i].destroy();
+        }
+        this.windowObjects = [];
+        
+        let windows = global.get_window_actors();
+        
+        let hasChild = false;
+        for ( let i = 0; i < windows.length; i++ ) {
+            if ( hasChild ) {
+                let separator = new PopupMenu.PopupSeparatorMenuItem();
+                this.windowsBox.add_actor(separator.actor);
+                separator.actor.remove_style_class_name("popup-menu-item");
+                separator._drawingArea.add_style_class_name("devtools-separator");
+            }
+            
+            let window = windows[i].metaWindow;
+            
+            let windowBox = new Window(window);
+            this.windowsBox.add_actor(windowBox.actor);
+            this.windowObjects.push(windowBox);
+        }
+    },
+    
+    onSelected: function() {
+        this.refresh();
     }
 }
 
@@ -305,15 +432,10 @@ TerminalInterface.prototype = {
     
     _init: function(parent) {
         
-        try {
         GenericInterface.prototype._init.call(this);
         
         let terminal = new Terminal();
         this.panel.add_actor(terminal.actor);
-            
-        } catch(e) {
-            global.logError(e);
-        }
         
     }
 }
@@ -375,7 +497,7 @@ CinnamonLogInterface.prototype = {
         let text = "";
         for ( let i = 0; i < stack.length; i++) {
             let logItem = stack[i];
-            text += this._formatTime(new Date(parseInt(logItem.timestamp))) + logItem.category + ':  ' + logItem.message + '\n';
+            text += this._formatTime(new Date(parseInt(logItem.timestamp))) + logItem.category + ":  " + logItem.message + "\n";
         }
         
         //set scroll position to the end (new content shown)
@@ -569,6 +691,7 @@ let interfaces = [
     new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
     new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
     new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
+    new WindowInterface()
 ];
 
 
