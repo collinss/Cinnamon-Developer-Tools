@@ -15,6 +15,7 @@ const St = imports.gi.St;
 const Util = imports.misc.util;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
+const Signals = imports.signals;
 
 const POPUP_MENU_ICON_SIZE = 24;
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
@@ -37,6 +38,7 @@ const SETTINGS_PAGES = [
 
 let button_base_path;
 let command_output_start_state;
+let desklet_raised = false;
 
 
 function CollapseButton(label, startState, callback) {
@@ -614,6 +616,121 @@ Menu.prototype = {
 }
 
 
+function RaisedBox() {
+    this._init();
+}
+
+RaisedBox.prototype = {
+    _init: function() {
+        try {
+            
+            this.stageEventIds = [];
+            this.settingsMenuEvents = [];
+            this.contextMenuEvents = [];
+            
+            this.actor = new St.Group({ visible: false, x: 0, y: 0 });
+            Main.uiGroup.add_actor(this.actor);
+            let constraint = new Clutter.BindConstraint({ source: global.stage,
+                                                          coordinate: Clutter.BindCoordinate.POSITION | Clutter.BindCoordinate.SIZE });
+            this.actor.add_constraint(constraint);
+            
+            this._backgroundBin = new St.Bin();
+            this.actor.add_actor(this._backgroundBin);
+            let monitor = Main.layoutManager.focusMonitor;
+            this._backgroundBin.set_position(monitor.x, monitor.y);
+            this._backgroundBin.set_size(monitor.width, monitor.height);
+            
+            let stack = new Cinnamon.Stack();
+            this._backgroundBin.child = stack;
+            
+            this.eventBlocker = new Clutter.Group({ reactive: true });
+            stack.add_actor(this.eventBlocker);
+            
+            this.groupContent = new St.Bin();
+            stack.add_actor(this.groupContent);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    add: function(desklet) {
+        try {
+            
+            this.desklet = desklet;
+            this.settingsMenu = this.desklet.settingsMenu.menu;
+            this.contextMenu = this.desklet._menu;
+            
+            this.groupContent.add_actor(this.desklet.actor);
+            
+            this.actor.show();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+            global.focus_manager.add_group(this.actor);
+            
+            this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
+            this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
+            this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
+            this.settingsMenuEvents.push(this.settingsMenu.connect("activate", Lang.bind(this, function() {
+                this.emit("closed");
+            })));
+            this.settingsMenuEvents.push(this.settingsMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
+                if ( !open ) {
+                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+                }
+            })));
+            this.contextMenuEvents.push(this.contextMenu.connect("activate", Lang.bind(this, function() {
+                this.emit("closed");
+            })));
+            this.contextMenuEvents.push(this.contextMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
+                if ( !open ) {
+                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+                }
+            })));
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    remove: function() {
+        try {
+            
+            for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
+            for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
+            for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
+            
+            if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
+            
+            this.actor.destroy();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    onStageEvent: function(actor, event) {
+        try {
+            
+            let type = event.type();
+            if ( type == Clutter.EventType.KEY_PRESS || type == Clutter.EventType.KEY_RELEASE ) return true;
+            
+            let target = event.get_source();
+            if ( target == this.desklet.actor || this.desklet.actor.contains(target) ||
+                 target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
+                 target == this.contextMenu.actor || this.contextMenu.actor.contains(target) ) return false;
+            if ( type == Clutter.EventType.BUTTON_RELEASE ) this.emit("closed");
+            
+        } catch(e) {
+            global.logError(e);
+        }
+        
+        return true;
+    }
+}
+Signals.addSignalMethods(RaisedBox.prototype);
+
+
 function myDesklet(metadata, desklet_id) {
     this._init(metadata, desklet_id);
 }
@@ -657,6 +774,59 @@ myDesklet.prototype = {
             command_output_start_state = this.terminalOutputShow;
         });
         command_output_start_state = this.terminalOutputShow;
+        this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
+        this.bindKey();
+    },
+    
+    bindKey: function() {
+        if ( this.keyId ) Main.keybindingManager.removeHotKey(this.keyId);
+        
+        this.keyId = "devtools-raise";
+        Main.keybindingManager.addHotKey(this.keyId, this.raiseKey, Lang.bind(this, this.toggleRaise));
+    },
+    
+    toggleRaise: function() {
+        try {
+            
+            if ( desklet_raised ) this.lower();
+            else this.raise();
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    raise: function() {
+        
+        if ( desklet_raised || this.changingRaiseState ) return;
+        this.changingRaiseState = true;
+        
+        this._draggable.inhibit = false;
+        this.raisedBox = new RaisedBox();
+        
+        let position = this.actor.get_position();
+        this.actor.get_parent().remove_actor(this.actor);
+        this.raisedBox.add(this);
+        
+        this.raisedBox.connect("closed", Lang.bind(this, this.lower));
+        
+        desklet_raised = true;
+        this.changingRaiseState = false;
+    },
+    
+    lower: function() {
+        if ( !desklet_raised || this.changingRaiseState ) return;
+        this.changingRaiseState = true;
+        
+        this._menu.close();
+        this.settingsMenu.menu.close();
+        
+        if ( this.raisedBox ) this.raisedBox.remove();
+        Main.deskletContainer.addDesklet(this.actor);
+        this._draggable.inhibit = false;
+        
+        desklet_raised = false;
+        this.changingRaiseState = false;
     },
     
     addButtons: function() {
@@ -677,10 +847,10 @@ myDesklet.prototype = {
         //cinnamon settings menu
         let setIFile = Gio.file_new_for_path(button_base_path + "settings-symbolic.svg");
         let setIGicon = new Gio.FileIcon({ file: setIFile });
-        let csMenuIcon = new St.Icon({ gicon: setIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
-        let csMenu = new Menu(csMenuIcon, _("Cinnamon Settings"), "devtools-button");
-        this.buttonArea.add_actor(csMenu.actor);
-        this._populateSettingsMenu(csMenu);
+        let settingsMenuIcon = new St.Icon({ gicon: setIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        this.settingsMenu = new Menu(settingsMenuIcon, _("Cinnamon Settings"), "devtools-button");
+        this.buttonArea.add_actor(this.settingsMenu.actor);
+        this._populateSettingsMenu();
         
         //inspect button
         let inspectButton = new St.Button({ style_class: "devtools-button" });
@@ -726,22 +896,24 @@ myDesklet.prototype = {
         this.contentArea.add_actor(this.tabBox);
     },
     
-    _populateSettingsMenu: function(menu) {
-        menu.addMenuItem("All Settings",
+    _populateSettingsMenu: function() {
+        this.settingsMenu.addMenuItem("All Settings",
                          function() { Util.spawnCommandLine("cinnamon-settings"); },
                          new St.Icon({ icon_name: "preferences-system", icon_size: POPUP_MENU_ICON_SIZE, icon_type: St.IconType.FULLCOLOR }));
         
-        menu.addSeparator();
+        this.settingsMenu.addSeparator();
         
         for ( let i = 0; i < SETTINGS_PAGES.length; i++ ) {
             let command = "cinnamon-settings " + SETTINGS_PAGES[i].page;
-            menu.addMenuItem(SETTINGS_PAGES[i].title,
+            this.settingsMenu.addMenuItem(SETTINGS_PAGES[i].title,
                              function() { Util.spawnCommandLine(command); },
                              new St.Icon({ icon_name: SETTINGS_PAGES[i].page, icon_size: POPUP_MENU_ICON_SIZE, icon_type: St.IconType.FULLCOLOR }));
         }
     },
     
     launchLookingGlass: function() {
+        this.lower();
+        
         if ( this.lgOpen ) {
             Util.spawnCommandLine("cinnamon-looking-glass");
         }
@@ -751,6 +923,8 @@ myDesklet.prototype = {
     },
     
     inspect: function() {
+        this.lower();
+        
         if ( this.lgOpen ) {
             Util.spawnCommandLine("cinnamon-looking-glass inspect");
         }

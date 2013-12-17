@@ -27,5 +27,11 @@
         "description": "Show process output on run",
         "default": true,
         "tooltip": "Uncheck to have it hidden initially"
+    },
+    
+    "raiseKey": {
+        "type": "keybinding",
+        "description": "Raise to top shorcut key",
+        "default": "<Super>v"
     }
 }
