@@ -41,6 +41,19 @@ let command_output_start_state;
 let desklet_raised = false;
 
 
+function initializeInterfaces() {
+    return [
+        new CinnamonLogInterface(),
+        new XSessionLogInterface(),
+        new TerminalInterface(),
+        new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
+        new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
+        new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
+        new WindowInterface()
+    ];
+}
+
+
 function Window(window) {
     this._init(window);
 }
@@ -684,17 +697,6 @@ ExtensionInterface.prototype = {
 }
 
 
-let interfaces = [
-    new CinnamonLogInterface(),
-    new XSessionLogInterface(),
-    new TerminalInterface(),
-    new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
-    new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
-    new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
-    new WindowInterface()
-];
-
-
 function Menu(icon, tooltip, styleClass) {
     this._init(icon, tooltip, styleClass);
 }
@@ -1009,10 +1011,12 @@ myDesklet.prototype = {
     },
     
     addContent: function() {
+        this.interfaces = initializeInterfaces();
+        
         this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
-        for ( let i in interfaces ) {
-            this.contentArea.add_actor(interfaces[i].panel);
-            let tab = interfaces[i].tab;
+        for ( let i in this.interfaces ) {
+            this.contentArea.add_actor(this.interfaces[i].panel);
+            let tab = this.interfaces[i].tab;
             this.tabBox.add_actor(tab);
             tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
         }
@@ -1059,9 +1063,9 @@ myDesklet.prototype = {
     selectTab: function(tab) {
         try {
             
-        for ( let i in interfaces ) {
-            if ( interfaces[i].tab == tab ) interfaces[i].setSelect(true);
-            else interfaces[i].setSelect(false);
+        for ( let i in this.interfaces ) {
+            if ( this.interfaces[i].tab == tab ) this.interfaces[i].setSelect(true);
+            else this.interfaces[i].setSelect(false);
         }
         } catch(e) {
             global.logError(e);
@@ -1069,9 +1073,9 @@ myDesklet.prototype = {
     },
     
     selectIndex: function(index) {
-        for ( let i in interfaces ) {
-            if ( i == index ) interfaces[i].setSelect(true);
-            else interfaces[i].setSelect(false);
+        for ( let i in this.interfaces ) {
+            if ( i == index ) this.interfaces[i].setSelect(true);
+            else this.interfaces[i].setSelect(false);
         }
     },
     
