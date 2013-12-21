@@ -62,64 +62,98 @@ Window.prototype = {
     _init: function(window) {
         
         this.window = window;
+        this.app = Cinnamon.WindowTracker.get_default().get_window_app(this.window);
         
-        this.actor = new St.BoxLayout({ vertical: true, style_class: "devtools-windows-windowBox" });
+        this.window.connect("unmanaged", Lang.bind(this, this.destroy));
+        
+        this.actor = new St.BoxLayout({ style_class: "devtools-windows-windowBox" });
+        let iconBin = new St.Bin({ style_class: "devtools-windows-icon" });
+        this.actor.add_actor(iconBin);
+        let box = new St.BoxLayout({ vertical: true });
+        this.actor.add_actor(box);
+        
+        let icon = this.getIcon();
+        iconBin.set_child(icon);
         
         let titleBox = new St.BoxLayout();
-        this.actor.add_actor(titleBox);
+        box.add_actor(titleBox);
         titleBox.add_actor(new St.Label({ text: "Title: ", width: 100 }));
         let title = new St.Label({ text: window.title, style_class: "devtools-windows-title" });
         titleBox.add_actor(title);
         
         let classBox = new St.BoxLayout();
-        this.actor.add_actor(classBox);
+        box.add_actor(classBox);
         classBox.add_actor(new St.Label({ text: "Class: ", width: 100 }));
         let wmClass = new St.Label({ text: window.get_wm_class() });
         classBox.add_actor(wmClass);
         
+        let workspaceBox = new St.BoxLayout();
+        box.add_actor(workspaceBox);
+        workspaceBox.add_actor(new St.Label({ text: "Workspace: ", width: 100 }));
+        let workspace = new St.Label({ text: this.getWorkspace() });
+        workspaceBox.add_actor(workspace);
         
+        let buttonBox = new St.BoxLayout();
+        box.add_actor(buttonBox);
         
-        //let tracker = Cinnamon.WindowTracker.get_default();
-            // Avoid multiple connections
-            //if (!window._lookingGlassManaged) {
-            //    window.connect("unmanaged", Lang.bind(this, this._updateWindowList));
-            //    window._lookingGlassManaged = true;
-            //    
-            //    window._lgId = this.lastId;
-            //    this.lastId++;
-            //}
-            //
-            //let lgInfo = { id: window._lgId.toString(), title: window.title, wmclass: window.get_wm_class(), app: ""};
-            //
-            //let box = new St.BoxLayout({ vertical: true });
-            //this.actor.add(box);
-            //let propsBox = new St.BoxLayout({ vertical: true, style: "padding-left: 6px;" });
-            //box.add(propsBox);
-            //let app = tracker.get_window_app(window);
-            //if (app != null && !app.is_window_backed()) {
-            //    let icon = app.create_icon_texture(22);
-            //    let propBox = new St.BoxLayout({ style: "spacing: 6px; " });
-            //    propsBox.add(propBox);
-            //    propBox.add(new St.Label({ text: "app: " }), { y_fill: false });
-            //    let appLink = new ObjLink(app, app.get_id());
-            //    propBox.add(appLink.actor, { y_fill: false });
-            //    propBox.add(icon, { y_fill: false });
-            //    
-            //    lgInfo.app = app.get_id();
-            //} else {
-            //    propsBox.add(new St.Label({ text: "<untracked>" }));
-            //    
-            //    lgInfo.app = "<untracked>";
-            //}
-            //
-            //// Ignore menus
-            //let wtype = window.get_window_type();
-            //if(wtype != Meta.WindowType.MENU && wtype != Meta.WindowType.DROPDOWN_MENU && wtype != Meta.WindowType.POPUP_MENU)
-            //    this.latestWindowList.push(lgInfo);
+        let inspectButton = new St.Button({ label: "Inspect", style_class: "devtools-contentButton" });
+        buttonBox.add_actor(inspectButton);
+        inspectButton.connect("clicked", Lang.bind(this, this.inspect));
+        
+        if ( this.workspace ) {
+            let switchToButton = new St.Button({ label: "Switch to", style_class: "devtools-contentButton" });
+            buttonBox.add_actor(switchToButton);
+            switchToButton.connect("clicked", Lang.bind(this, this.switchTo));
+        }
+        
+        let closeButton = new St.Button({ label: "Close", style_class: "devtools-contentButton" });
+        buttonBox.add_actor(closeButton);
+        closeButton.connect("clicked", Lang.bind(this, this.close));
+        
     },
     
     destroy: function() {
         this.actor.destroy();
+    },
+    
+    getIcon: function() {
+        if ( this.window.title == "Desktop" ) return new St.Icon({ icon_name: "desktop", icon_size: 48, icon_type: St.IconType.FULLCOLOR });
+        if ( this.app != null ) return this.app.create_icon_texture(48);
+        else return new St.Icon({ icon_name: "application-default-icon", icon_size: 48, icon_type: St.IconType.FULLCOLOR });
+    },
+    
+    getWorkspace: function() {
+        if ( this.window.is_on_all_workspaces() ) {
+            this.workspace = "all";
+            return "all";
+        }
+        
+        for ( let wsId = 0; wsId < global.screen.n_workspaces; wsId++ ) {
+            let name = Main.getWorkspaceName(wsId);
+            let wsMeta = global.screen.get_workspace_by_index(wsId);
+            if ( wsMeta.list_windows().indexOf(this.window) != -1 ) {
+                this.workspace = wsMeta;
+                return name;
+            }
+        }
+        
+        return "none";
+    },
+    
+    inspect: function() {
+        Main.createLookingGlass().open();
+        Main.lookingGlass.inspectObject(this.app);
+    },
+    
+    switchTo: function() {
+        if ( !this.workspace ) return;
+        if ( this.workspace != "all" ) this.workspace.activate(global.get_current_time());
+        this.window.unminimize(global.get_current_time());
+        this.window.activate(global.get_current_time());
+    },
+    
+    close: function() {
+        this.window.delete(global.get_current_time());
     }
 }
 
