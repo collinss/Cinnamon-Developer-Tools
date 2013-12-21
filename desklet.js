@@ -1008,7 +1008,7 @@ myDesklet.prototype = {
         if ( this.collapsedStartState == 1 ) this.collapsed = false;
         else if ( this.collapsedStartState == 2 ) this.collapsed = true;
         
-        let paddingBox = new St.Bin();
+        let paddingBox = new St.Bin({ min_width: 15 });
         this.buttonArea.add(paddingBox, { expand: true });
         
         //cinnamon settings menu
