@@ -1,6 +1,5 @@
 .devtools-panel {
-    height: 600px;
-    width: 700px;
+    
 }
 
 .devtools-button {
@@ -60,6 +59,10 @@
 
 .devtools-windows-icon {
     
+}
+
+.devtools-windows-buttonBox {
+    spacing: 8px;
 }
 
 .devtools-separator {

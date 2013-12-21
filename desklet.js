@@ -20,7 +20,6 @@ const Signals = imports.signals;
 const POPUP_MENU_ICON_SIZE = 24;
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
 const XSESSION_LOG_REFRESH_TIMEOUT = 10;
-const TERMINAL_REFRESH_TIMEOUT = 10;
 
 const SETTINGS_PAGES = [
     { title: "Applet Settings",      page: "applets" },
@@ -93,7 +92,7 @@ Window.prototype = {
         let workspace = new St.Label({ text: this.getWorkspace() });
         workspaceBox.add_actor(workspace);
         
-        let buttonBox = new St.BoxLayout();
+        let buttonBox = new St.BoxLayout({ style_class: "devtools-windows-buttonBox" });
         box.add_actor(buttonBox);
         
         let inspectButton = new St.Button({ label: "Inspect", style_class: "devtools-contentButton" });
@@ -382,9 +381,11 @@ GenericInterface.prototype = {
         
     },
     
-    setSelect: function(select) {
+    setSelect: function(select, height, width) {
         if ( select ) {
             this.selected = true;
+            this.panel.height = height;
+            this.panel.width = width;
             this.onSelected();
             this.panel.show();
             this.tab.add_style_pseudo_class("selected");
@@ -430,8 +431,11 @@ WindowInterface.prototype = {
         global.display.connect("window-created", Lang.bind(this, this.refresh));
         tracker.connect("tracked-windows-changed", Lang.bind(this, this.refresh));
         
+        let scrollBox = new St.ScrollView();
+        this.panel.add_actor(scrollBox);
+        
         this.windowsBox = new St.BoxLayout({ vertical: true, style_class: "devtools-windows-mainBox" });
-        this.panel.add_actor(this.windowsBox);
+        scrollBox.add_actor(this.windowsBox);
         
     },
     
@@ -905,6 +909,8 @@ myDesklet.prototype = {
             button_base_path = this.metadata.path + "/buttons/";
             this._bindSettings();
             
+            this.interfaces = initializeInterfaces();
+            
             let mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
             this.setContent(mainBox);
             this.buttonArea = new St.BoxLayout({ vertical: false, style_class: "devtools-buttonArea" });
@@ -934,6 +940,8 @@ myDesklet.prototype = {
         });
         command_output_start_state = this.terminalOutputShow;
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.reselectCurrent);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.reselectCurrent);
         this.bindKey();
     },
     
@@ -1045,15 +1053,15 @@ myDesklet.prototype = {
     },
     
     addContent: function() {
-        this.interfaces = initializeInterfaces();
-        
+        this.interfaceBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: true/*, height: this.height, width: this.width*/ });
         this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
         for ( let i in this.interfaces ) {
-            this.contentArea.add_actor(this.interfaces[i].panel);
+            this.interfaceBox.add_actor(this.interfaces[i].panel);
             let tab = this.interfaces[i].tab;
             this.tabBox.add_actor(tab);
             tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
         }
+        this.contentArea.add_actor(this.interfaceBox);
         this.contentArea.add_actor(this.tabBox);
     },
     
@@ -1095,22 +1103,27 @@ myDesklet.prototype = {
     },
     
     selectTab: function(tab) {
-        try {
-            
         for ( let i in this.interfaces ) {
-            if ( this.interfaces[i].tab == tab ) this.interfaces[i].setSelect(true);
+            if ( this.interfaces[i].tab == tab ) {
+                this.interfaces[i].setSelect(true, this.height, this.width);
+                this.selected = i;
+            }
             else this.interfaces[i].setSelect(false);
-        }
-        } catch(e) {
-            global.logError(e);
         }
     },
     
     selectIndex: function(index) {
         for ( let i in this.interfaces ) {
-            if ( i == index ) this.interfaces[i].setSelect(true);
+            if ( i == index ) {
+                this.interfaces[i].setSelect(true, this.height, this.width);
+                this.selected = i;
+            }
             else this.interfaces[i].setSelect(false);
         }
+    },
+    
+    reselectCurrent: function() {
+        this.selectIndex(this.selected);
     },
     
     setHideState: function(event) {

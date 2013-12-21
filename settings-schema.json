@@ -33,5 +33,23 @@
         "type": "keybinding",
         "description": "Raise to top shorcut key",
         "default": "<Super>v"
+    },
+    
+    "height": {
+        "type": "scale",
+        "description": "Height",
+        "min": 250,
+        "max": 750,
+        "step": 50,
+        "default": 600
+    },
+    
+    "width": {
+        "type": "scale",
+        "description": "Width",
+        "min": 500,
+        "max": 1000,
+        "step": 50,
+        "default": 700
     }
 }
