@@ -16,26 +16,20 @@
 
 .devtools-tabBox {
     padding: 3px;
-    spacing: 3px;
+    spacing: 10px;
 }
 
 .devtools-panelButton {
     padding: 3px;
 }
 
-.devtools-refreshBox {
+/*.devtools-refreshBox {
     padding: 3px;
     spacin: 2px;
 }
+*/
 
-.devtools-extension-mainBox {
-    
-}
-
-.devtools-extension-container {
-    
-}
-
+/*terminal*/
 .devtools-terminal-entry {
     background-color: #ffffff;
     color: #000000;
@@ -49,6 +43,24 @@
     
 }
 
+/*extensions*/
+.devtools-extension-mainBox {
+    
+}
+
+.devtools-extension-container {
+    
+}
+
+.devtools-extension-buttonBox {
+    spacing: 20px;
+}
+
+.devtools-extension-instanceBox {
+    spacing: 20px;
+}
+
+/*windows*/
 .devtools-windows-mainBox {
     
 }
@@ -62,7 +74,7 @@
 }
 
 .devtools-windows-buttonBox {
-    spacing: 8px;
+    spacing: 20px;
 }
 
 .devtools-separator {

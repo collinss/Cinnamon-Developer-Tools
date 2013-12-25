@@ -1,5 +1,8 @@
+const AppletManager = imports.ui.appletManager;
 const Desklet = imports.ui.desklet;
+const DeskletManager = imports.ui.deskletManager;
 const Extension = imports.ui.extension;
+const Flashspot = imports.ui.flashspot;
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
@@ -50,6 +53,217 @@ function initializeInterfaces() {
         new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
         new WindowInterface()
     ];
+}
+
+
+function CollapseButton(label, startState, child) {
+    this._init(label, startState, child);
+}
+
+CollapseButton.prototype = {
+    _init: function(label, startState, child) {
+        this.state = startState;
+        
+        this.actor = new St.BoxLayout({ vertical: true });
+        
+        let button = new St.Button({ x_align: St.Align.START, x_expand: false, x_fill: false, style_class: "devtools-contentButton" });
+        this.actor.add_actor(button);
+        let buttonBox = new St.BoxLayout();
+        button.set_child(buttonBox);
+        buttonBox.add_actor(new St.Label({ text: label }));
+        
+        this.arrowIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: 8, style: "padding: 4px;" });
+        buttonBox.add_actor(this.arrowIcon);
+        
+        this.childBin = new St.Bin({ x_align: St.Align.START, visible: startState });
+        this.actor.add_actor(this.childBin);
+        if ( child ) this.childBin.set_child(child);
+        
+        this._updateState();
+        
+        button.connect("clicked", Lang.bind(this, this.toggleState));
+    },
+    
+    setChild: function(child) {
+        this.childBin.set_child(child);
+    },
+    
+    toggleState: function() {
+        if ( this.state ) this.state = false;
+        else this.state = true;
+        this._updateState();
+    },
+    
+    _updateState: function() {
+        let path;
+        if ( this.state ) {
+            this.childBin.show();
+            path = button_base_path + "open-symbolic.svg";
+        }
+        else {
+            this.childBin.hide();
+            path = button_base_path + "closed-symbolic.svg";
+        }
+        let file = Gio.file_new_for_path(path);
+        let gicon = new Gio.FileIcon({ file: file });
+        this.arrowIcon.gicon = gicon;
+    }
+}
+
+
+function ExtensionBox(meta, type) {
+    this._init(meta, type);
+}
+
+ExtensionBox.prototype = {
+    _init: function(meta, type) {
+        try {
+            this.meta = meta;
+            this.type = type;
+            let extensionObjs = Extension.objects[meta.uuid]._loadedDefinitions;
+            this.instances = [];
+            for( let id in extensionObjs ) this.instances.push(extensionObjs[id]);
+            
+            this.actor = new St.BoxLayout({ style_class: "devtools-extension-container" });
+            
+            //set icon
+            let icon;
+            if ( meta.icon ) icon = new St.Icon({ icon_name: meta.icon, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
+            else {
+                let file = Gio.file_new_for_path(meta.path + "/icon.png");
+                if ( file.query_exists(null) ) {
+                    let gicon = new Gio.FileIcon({ file: file });
+                    icon = new St.Icon({ gicon: gicon, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
+                }
+                else {
+                    icon = new St.Icon({ icon_name: "applets", icon_size: 48, icon_type: St.IconType.FULLCOLOR });
+                }
+            }
+            this.actor.add_actor(icon);
+            
+            //info
+            let infoBox = new St.BoxLayout({ vertical: true });
+            this.actor.add_actor(infoBox);
+            let name = new St.Label({ text: meta.name+" ("+meta.uuid+")" });
+            infoBox.add_actor(name);
+            let description = new St.Label({ text: meta.description });
+            infoBox.add_actor(description);
+            
+            //commands
+            let commandBox = new St.BoxLayout({ style_class: "devtools-extension-buttonBox" });
+            
+            //reload
+            let reloadButton = new St.Button({ label: "Reload", style_class: "devtools-contentButton" });
+            commandBox.add_actor(reloadButton);
+            reloadButton.connect("clicked", Lang.bind(this, function() {
+                Extension.unloadExtension(meta.uuid);
+                Extension.loadExtension(meta.uuid, this.info);
+            }));
+            
+            //remove
+            let removeButton = new St.Button({ label: "Remove", style_class: "devtools-contentButton" });
+            commandBox.add_actor(removeButton);
+            removeButton.connect("clicked", Lang.bind(this, this.removeAll));
+            
+            //check for multi-instance
+            if ( meta["max-instances"] && meta["max-instances"] > 1 ) {
+                let instanceDropdown = new CollapseButton("Instances: "+this.instances.length+" of "+meta["max-instances"], false, null);
+                infoBox.add_actor(instanceDropdown.actor);
+                
+                let instancesContainer = new St.BoxLayout({ vertical: true });
+                instanceDropdown.setChild(instancesContainer);
+                
+                for ( let i = 0; i < this.instances.length; i++ ) {
+                    let instance = this.instances[i];
+                    let id;
+                    if ( type == "Applet" ) id = instance.applet_id;
+                    else id = instance.desklet_id;
+                    
+                    let instanceBox = new St.BoxLayout({ style_class: "devtools-extension-instanceBox" });
+                    instancesContainer.add_actor(instanceBox);
+                    
+                    instanceBox.add_actor(new St.Label({ text: "ID: "+id }));
+                    
+                    //highlight button
+                    let highlightButton = new St.Button({ label: "Highlight" });
+                    instanceBox.add_actor(highlightButton);
+                    highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(id, true); }));
+                    
+                    //remove button
+                    let removeButton = new St.Button({ label: "Remove" });
+                    instanceBox.add_actor(removeButton);
+                    removeButton.connect("clicked", Lang.bind(this, function() { this.remove(id); }));
+                }
+            }
+            else {
+                //highlight button
+                if ( this.type == "Applet" || this.type == "Desklet" ) {
+                    let highlightButton = new St.Button({ label: "Highlight" });
+                    commandBox.add_actor(highlightButton);
+                    highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(meta.uuid, false); }));
+                }
+            }
+            
+            //link to settings
+            if ( !meta["hide-configuration"] && GLib.file_test(meta.path + "/settings-schema.json", GLib.FileTest.EXISTS)) {
+                let settingsButton = new St.Button({ label: "Settings", style_class: "devtools-contentButton" });
+                commandBox.add_actor(settingsButton);
+                settingsButton.connect("clicked", Lang.bind(this, function() {
+                    Util.spawnCommandLine("cinnamon-settings applets " + meta.uuid);
+                }));
+            }
+            infoBox.add_actor(commandBox);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    remove: function(id) {
+        switch ( this.type ) {
+            case "Applet":
+                AppletManager._removeAppletFromPanel(null, null, null, this.meta.uuid, id);
+                break;
+            case "Desklet":
+                DeskletManager.removeDesklet(this.meta.uuid, id);
+                break;
+            case "Extension":
+                Extension.unloadExtension(meta.uuid);
+                break;
+        }
+    },
+    
+    removeAll: function() {
+        for ( let i = 0; i < this.instances.length; i++ ) {
+            let instance = this.instances[i];
+            let id;
+            if ( this.type == "Applet" ) id = instance.applet_id;
+            else id = instance.desklet_id;
+            this.remove(id);
+        }
+    },
+    
+    highlight: function(id, isInstance) {
+        let obj = null;
+        if ( isInstance ) {
+            if ( this.type == "Applet" ) obj = AppletManager.get_object_for_instance(id);
+            else obj = DeskletManager.get_object_for_instance(id)
+        }
+        else {
+            if ( this.type == "Applet" )obj = AppletManager.get_object_for_uuid(id)
+            else obj = DeskletManager.get_object_for_uuid(id)
+        }
+        if ( !obj ) return;
+        
+        let actor = obj.actor;
+        if ( !actor ) return;
+        
+        let [x, y] = actor.get_transformed_position();
+        let [w, h] = actor.get_transformed_size();
+        
+        let flashspot = new Flashspot.Flashspot({ x : x, y : y, width: w, height: h });
+        flashspot.fire();
+    }
 }
 
 
@@ -157,45 +371,6 @@ Window.prototype = {
 }
 
 
-function CollapseButton(label, startState, callback) {
-    this._init(label, startState, callback);
-}
-
-CollapseButton.prototype = {
-    _init: function(label, startState, callback) {
-        this.state = startState;
-        this.callback = callback;
-        
-        this.actor = new St.Button({ x_expand: false, x_fill: false, style_class: "devtools-contentButton" });
-        let buttonBox = new St.BoxLayout();
-        this.actor.set_child(buttonBox);
-        buttonBox.add_actor(new St.Label({ text: label }));
-        
-        this.arrowIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: 8, style: "padding: 4px;" });
-        buttonBox.add_actor(this.arrowIcon);
-        this._updateIcon();
-        
-        this.actor.connect("clicked", Lang.bind(this, this._onButtonClicked));
-    },
-    
-    _onButtonClicked: function() {
-        if ( this.state ) this.state = false;
-        else this.state = true;
-        this._updateIcon();
-        this.callback(this.state);
-    },
-    
-    _updateIcon: function() {
-        let path;
-        if ( this.state ) path = button_base_path + "open-symbolic.svg";
-        else path = button_base_path + "closed-symbolic.svg";
-        let file = Gio.file_new_for_path(path);
-        let gicon = new Gio.FileIcon({ file: file });
-        this.arrowIcon.gicon = gicon;
-    }
-}
-
-
 function Command(command, pId, inId, outId, errId, output) {
     this._init(command, pId, inId, outId, errId, output);
 }
@@ -245,16 +420,12 @@ Command.prototype = {
         let toggleBox = new St.BoxLayout();
         this.actor.add_actor(toggleBox);
         this.showOutput = command_output_start_state;
-        let outputButton = new CollapseButton("Output", command_output_start_state, Lang.bind(this, function(openState){
-            if ( openState ) this.output.show();
-            else this.output.hide();
-        }));
+        let outputButton = new CollapseButton("Output", command_output_start_state);
         toggleBox.add_actor(outputButton.actor);
         
         //output
         this.output = new St.Label();
-        if ( !this.showOutput ) this.output.hide();
-        this.actor.add_actor(this.output);
+        outputButton.setChild(this.output);
         this.output.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         this.output.clutter_text.line_wrap = true;
         
@@ -305,6 +476,7 @@ Terminal.prototype = {
         
         this.input = new St.Entry({ style_class: "devtools-terminal-entry", track_hover: false, can_focus: true });
         this.actor.add_actor(this.input);
+        this.input.set_name("terminalInput");
         
         let scrollBox = new St.ScrollView();
         this.actor.add_actor(scrollBox);
@@ -312,7 +484,7 @@ Terminal.prototype = {
         this.output = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processMainBox" });
         scrollBox.add_actor(this.output);
         
-        this.input.clutter_text.connect("button_press_event", Lang.bind(this, this.onButtonPress));
+        this.input.clutter_text.connect("button_press_event", Lang.bind(this, this.enter));
         this.input.clutter_text.connect("key_press_event", Lang.bind(this, this.onKeyPress));
         
     },
@@ -347,7 +519,6 @@ Terminal.prototype = {
     },
     
     onKeyPress: function(actor, event) {
-        
         let symbol = event.get_key_symbol();
         if ( symbol == Clutter.Return || symbol == Clutter.KP_Enter ) {
             this.runInput();
@@ -357,8 +528,23 @@ Terminal.prototype = {
         return false;
     },
     
-    onButtonPress: function() {
-        global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+    enter: function() {
+        let currentMode = global.stage_input_mode;
+        if ( currentMode != Cinnamon.StageInputMode.FOCUSED ) {
+            this.previousMode = currentMode;
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+        }
+        
+        this.input.grab_key_focus();
+        
+        if ( !this.leaveEventId ) this.leaveEventId = this.input.connect("key-focus-out", Lang.bind(this, this.leave));
+    },
+    
+    leave: function() {
+        if ( this.previousMode ) global.set_stage_input_mode(this.previousMode);
+        this.previousMode = null;
+        
+        if ( this.leaveEventId ) this.input.disconnect(this.leaveEventId);
     }
 }
 
@@ -445,6 +631,7 @@ WindowInterface.prototype = {
         for ( let i = 0; i < this.windowObjects.length; i++ ) {
             this.windowObjects[i].destroy();
         }
+        this.windowsBox.destroy_all_children();
         this.windowObjects = [];
         
         let windows = global.get_window_actors();
@@ -463,6 +650,7 @@ WindowInterface.prototype = {
             let windowBox = new Window(window);
             this.windowsBox.add_actor(windowBox.actor);
             this.windowObjects.push(windowBox);
+            hasChild = true;
         }
     },
     
@@ -668,8 +856,6 @@ ExtensionInterface.prototype = {
             this.info.connect("extension-loaded", Lang.bind(this, this.reload));
             this.info.connect("extension-unloaded", Lang.bind(this, this.reload));
             
-            this.reload();
-            
         } catch(e) {
             global.logError(e);
         }
@@ -677,11 +863,13 @@ ExtensionInterface.prototype = {
     
     reload: function() {
         try {
+            if ( !this.selected ) return;
             this.extensionBox.destroy_all_children();
             
             let hasChild = false;
             for ( let uuid in Extension.meta ) {
                 let meta = Extension.meta[uuid];
+                
                 if ( !meta.name ) continue;
                 if ( !Extension.objects[uuid] ) continue;
                 if ( Extension.objects[uuid].type.name != this.info.name ) continue;
@@ -693,37 +881,11 @@ ExtensionInterface.prototype = {
                     separator._drawingArea.add_style_class_name("devtools-separator");
                 }
                 
-                let extension = new St.BoxLayout({ vertical: true, style_class: "devtools-extension-container" });
-                let name = new St.Label({ text: meta.name });
-                extension.add_actor(name);
+                let extension = new ExtensionBox(meta, this.info.name);
+                this.extensionBox.add_actor(extension.actor);
                 
-                let description = new St.Label({ text: meta.description });
-                extension.add_actor(description);
-                
-                let commandBox = new St.BoxLayout();
-                extension.add_actor(commandBox);
-                let reload = new St.Button({ x_align: St.Align.START, x_fill: false, x_expand: false, style_class: "devtools-contentButton" });
-                commandBox.add_actor(reload);
-                let reloadBox = new St.BoxLayout();
-                reload.set_child(reloadBox);
-                reload.connect("clicked", Lang.bind(this, function() {
-                    Extension.unloadExtension(meta.uuid);
-                    Extension.loadExtension(meta.uuid, this.info);
-                }));
-                
-                let file = Gio.file_new_for_path(button_base_path + "restart-symbolic.svg");
-                let gicon = new Gio.FileIcon({ file: file });
-                let reloadIcon = new St.Icon({ gicon: gicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
-                reloadBox.add_actor(reloadIcon);
-                let reloadLabelBin = new St.Bin();
-                reloadBox.add_actor(reloadLabelBin);
-                let reloadLabel = new St.Label({ text: _("Reload Code") });
-                reloadLabelBin.add_actor(reloadLabel);
-                
-                this.extensionBox.add_actor(extension);
                 hasChild = true;
             }
-            
         } catch(e) {
             global.logError(e);
         }
@@ -876,9 +1038,14 @@ RaisedBox.prototype = {
         try {
             
             let type = event.type();
+            let target = event.get_source();
+            
+//let name = target.get_name();
+//global.log(name == "terminalInput");
+            if ( target.name == "terminalInput" ) return false;
+            
             if ( type == Clutter.EventType.KEY_PRESS || type == Clutter.EventType.KEY_RELEASE ) return true;
             
-            let target = event.get_source();
             if ( target == this.desklet.actor || this.desklet.actor.contains(target) ||
                  target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
                  target == this.contextMenu.actor || this.contextMenu.actor.contains(target) ) return false;
