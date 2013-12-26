@@ -1206,6 +1206,18 @@ myDesklet.prototype = {
         lgButton.connect("clicked", Lang.bind(this, this.launchLookingGlass));
         new Tooltips.Tooltip(lgButton, _("Open Looking Glass"));
         
+        //reload theme button
+        let rtButton = new St.Button({ style_class: "devtools-button" });
+        let rtIFile = Gio.file_new_for_path(button_base_path + "theme-symbolic.svg");
+        let rtIGicon = new Gio.FileIcon({ file: rtIFile });
+        let rtIcon = new St.Icon({ gicon: rtIGicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        rtButton.set_child(rtIcon);
+        this.buttonArea.add_actor(rtButton);
+        rtButton.connect("clicked", Lang.bind(this, function() {
+            Main.loadTheme();
+        }));
+        new Tooltips.Tooltip(rtButton, _("Reload Theme"));
+        
         //restart button
         let restartButton = new St.Button({ style_class: "devtools-button" });
         let restartIFile = Gio.file_new_for_path(button_base_path + "restart-symbolic.svg");
