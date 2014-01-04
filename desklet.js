@@ -342,10 +342,7 @@ ExtensionItem.prototype = {
             //reload
             let reloadButton = new St.Button({ label: "Reload", x_align: St.Align.END, style_class: "devtools-contentButton" });
             buttonBox.add_actor(reloadButton);
-            reloadButton.connect("clicked", Lang.bind(this, function() {
-                Extension.unloadExtension(meta.uuid);
-                Extension.loadExtension(meta.uuid, this.info);
-            }));
+            reloadButton.connect("clicked", Lang.bind(this, this.reload));
             
             //remove
             let removeButton = new St.Button({ label: "Remove", x_align: St.Align.END, style_class: "devtools-contentButton" });
@@ -363,7 +360,7 @@ ExtensionItem.prototype = {
                 for ( let i = 0; i < this.instances.length; i++ ) {
                     let instance = this.instances[i];
                     let id;
-                    if ( type == "Applet" ) id = instance.applet_id;
+                    if ( type == Extension.Type.APPLET ) id = instance.applet_id;
                     else id = instance.desklet_id;
                     
                     let instanceBox = new St.BoxLayout({ style_class: "devtools-extension-instanceBox" });
@@ -384,7 +381,7 @@ ExtensionItem.prototype = {
             }
             else {
                 //highlight button
-                if ( this.type == "Applet" || this.type == "Desklet" ) {
+                if ( this.type == Extension.Type.APPLET || this.type == Extension.Type.DESKLET ) {
                     let highlightButton = new St.Button({ label: "Highlight", x_align: St.Align.END });
                     buttonBox.add_actor(highlightButton);
                     highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(meta.uuid, false); }));
@@ -403,6 +400,12 @@ ExtensionItem.prototype = {
         } catch(e) {
             global.logError(e);
         }
+    },
+    
+    reload: function() {
+        //global.log("hello");
+        Extension.unloadExtension(this.meta.uuid);
+        Extension.loadExtension(this.meta.uuid, this.type);
     },
     
     remove: function(id) {
@@ -1088,7 +1091,7 @@ ExtensionInterface.prototype = {
                     separator._drawingArea.add_style_class_name("devtools-separator");
                 }
                 
-                let extension = new ExtensionItem(meta, this.info.name);
+                let extension = new ExtensionItem(meta, this.info);
                 this.extensionBox.add_actor(extension.actor);
                 
                 hasChild = true;

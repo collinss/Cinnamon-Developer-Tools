@@ -1,7 +1,6 @@
 To-Do
 -----
     Double-check theme asthetics
-    Fix x-let reload code function
 
 Done
 ----
@@ -15,6 +14,7 @@ Done
     Implement raise to top
     Open windows interface
     Reload theme button
+    Fix x-let reload code function
 
 Wish-list
 ---------
