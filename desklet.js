@@ -1,3 +1,4 @@
+//javascript ui imports
 const AppletManager = imports.ui.appletManager;
 const Desklet = imports.ui.desklet;
 const DeskletManager = imports.ui.deskletManager;
@@ -8,6 +9,7 @@ const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
 const Tooltips = imports.ui.tooltips;
 
+//gobject introspection imports
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
@@ -15,15 +17,18 @@ const GLib = imports.gi.GLib;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 
+//other imports
 const Util = imports.misc.util;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Signals = imports.signals;
 
+//global constants
 const POPUP_MENU_ICON_SIZE = 24;
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
 const XSESSION_LOG_REFRESH_TIMEOUT = 10;
 
+//pages to display in the settings menu
 const SETTINGS_PAGES = [
     { title: "Applet Settings",      page: "applets" },
     { title: "Desklet Settings",     page: "desklets" },
@@ -37,7 +42,7 @@ const SETTINGS_PAGES = [
     { title: "Workspace Settings",   page: "workspaces" }
 ]
 
-
+//global variables
 let button_base_path;
 let command_output_start_state;
 let desklet_raised = false;
@@ -56,6 +61,7 @@ function initializeInterfaces() {
 }
 
 
+//widgets
 function CollapseButton(label, startState, child) {
     this._init(label, startState, child);
 }
@@ -111,11 +117,173 @@ CollapseButton.prototype = {
 }
 
 
-function ExtensionBox(meta, type) {
+function Menu(icon, tooltip, styleClass) {
+    this._init(icon, tooltip, styleClass);
+}
+
+Menu.prototype = {
+    _init: function(icon, tooltip, styleClass) {
+        try {
+            
+            this.actor = new St.Button({ style_class: styleClass });
+            this.actor.set_child(icon);
+            new Tooltips.Tooltip(this.actor, tooltip);
+            
+            this.menuManager = new PopupMenu.PopupMenuManager(this);
+            this.menu = new PopupMenu.PopupMenu(this.actor, 0.0, St.Side.TOP, 0);
+            this.menuManager.addMenu(this.menu);
+            Main.uiGroup.add_actor(this.menu.actor);
+            this.menu.actor.hide();
+            
+            this.actor.connect("clicked", Lang.bind(this, this.activate));
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    activate: function() {
+        this.menu.toggle();
+    },
+    
+    addMenuItem: function(title, callback, icon) {
+        let menuItem = new PopupMenu.PopupBaseMenuItem();
+        if ( icon ) menuItem.addActor(icon);
+        let label = new St.Label({ text: title });
+        menuItem.addActor(label);
+        menuItem.connect("activate", callback);
+        this.menu.addMenuItem(menuItem);
+    },
+    
+    addSeparator: function() {
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    }
+}
+
+
+function RaisedBox() {
+    this._init();
+}
+
+RaisedBox.prototype = {
+    _init: function() {
+        try {
+            
+            this.stageEventIds = [];
+            this.settingsMenuEvents = [];
+            this.contextMenuEvents = [];
+            
+            this.actor = new St.Group({ visible: false, x: 0, y: 0 });
+            Main.uiGroup.add_actor(this.actor);
+            let constraint = new Clutter.BindConstraint({ source: global.stage,
+                                                          coordinate: Clutter.BindCoordinate.POSITION | Clutter.BindCoordinate.SIZE });
+            this.actor.add_constraint(constraint);
+            
+            this._backgroundBin = new St.Bin();
+            this.actor.add_actor(this._backgroundBin);
+            let monitor = Main.layoutManager.focusMonitor;
+            this._backgroundBin.set_position(monitor.x, monitor.y);
+            this._backgroundBin.set_size(monitor.width, monitor.height);
+            
+            let stack = new Cinnamon.Stack();
+            this._backgroundBin.child = stack;
+            
+            this.eventBlocker = new Clutter.Group({ reactive: true });
+            stack.add_actor(this.eventBlocker);
+            
+            this.groupContent = new St.Bin();
+            stack.add_actor(this.groupContent);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    add: function(desklet) {
+        try {
+            
+            this.desklet = desklet;
+            this.settingsMenu = this.desklet.settingsMenu.menu;
+            this.contextMenu = this.desklet._menu;
+            
+            this.groupContent.add_actor(this.desklet.actor);
+            
+            this.actor.show();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+            global.focus_manager.add_group(this.actor);
+            
+            this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
+            this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
+            this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
+            this.settingsMenuEvents.push(this.settingsMenu.connect("activate", Lang.bind(this, function() {
+                this.emit("closed");
+            })));
+            this.settingsMenuEvents.push(this.settingsMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
+                if ( !open ) {
+                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+                }
+            })));
+            this.contextMenuEvents.push(this.contextMenu.connect("activate", Lang.bind(this, function() {
+                this.emit("closed");
+            })));
+            this.contextMenuEvents.push(this.contextMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
+                if ( !open ) {
+                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+                }
+            })));
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    remove: function() {
+        try {
+            
+            for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
+            for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
+            for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
+            
+            if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
+            
+            this.actor.destroy();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    onStageEvent: function(actor, event) {
+        try {
+            
+            let type = event.type();
+            let target = event.get_source();
+            
+            if ( target.name == "terminalInput" ) return false;
+            
+            if ( type == Clutter.EventType.KEY_PRESS || type == Clutter.EventType.KEY_RELEASE ) return true;
+            
+            if ( target == this.desklet.actor      || this.desklet.actor.contains(target) ||
+                 target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
+                 target == this.contextMenu.actor  || this.contextMenu.actor.contains(target) ) return false;
+            if ( type == Clutter.EventType.BUTTON_RELEASE ) this.emit("closed");
+            
+        } catch(e) {
+            global.logError(e);
+        }
+        
+        return true;
+    }
+}
+Signals.addSignalMethods(RaisedBox.prototype);
+
+
+function ExtensionItem(meta, type) {
     this._init(meta, type);
 }
 
-ExtensionBox.prototype = {
+ExtensionItem.prototype = {
     _init: function(meta, type) {
         try {
             this.meta = meta;
@@ -126,7 +294,7 @@ ExtensionBox.prototype = {
             
             this.actor = new St.BoxLayout({ style_class: "devtools-extension-container" });
             
-            //set icon
+            /*icon*/
             let icon;
             if ( meta.icon ) icon = new St.Icon({ icon_name: meta.icon, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
             else {
@@ -141,34 +309,53 @@ ExtensionBox.prototype = {
             }
             this.actor.add_actor(icon);
             
-            //info
+            /*info*/
             let infoBox = new St.BoxLayout({ vertical: true });
-            this.actor.add_actor(infoBox);
-            let name = new St.Label({ text: meta.name+" ("+meta.uuid+")" });
-            infoBox.add_actor(name);
-            let description = new St.Label({ text: meta.description });
-            infoBox.add_actor(description);
+            this.actor.add(infoBox, { expand: true });
+            let table = new St.Table({ homogeneous: false, clip_to_allocation: true });
+            infoBox.add(table, { y_align: St.Align.MIDDLE, y_expand: false });
             
-            //commands
-            let commandBox = new St.BoxLayout({ style_class: "devtools-extension-buttonBox" });
+            //name
+            table.add(new St.Label({ text: "Name:  " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
+            let name = new St.Label({ text: meta.name+" ("+meta.uuid+")" });
+            table.add(name, { row: 0, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
+            
+            //description
+            table.add(new St.Label({ text: "Description:  " }), { row: 1, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
+            //let bin = new St.Bin({  });
+            let description = new St.Label({ text: "" });
+            //description.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            //description.clutter_text.line_wrap = true;
+            table.add(description, { row: 1, col: 1, col_span: 1, y_expand: true, x_expand: false, x_align: St.Align.START });
+            //bin.add_actor(description);
+            description.set_text(meta.description);
+            
+            //status
+            table.add(new St.Label({ text: "Status: " }), { row: 2, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
+            let status = new St.Label({ text: Extension.getMetaStateString(meta.state) });
+            table.add(status, { row: 2, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
+            
+            /*extension options*/
+            let buttonBox = new St.BoxLayout({ vertical:true, style_class: "devtools-extension-buttonBox" });
+            this.actor.add_actor(buttonBox);
             
             //reload
-            let reloadButton = new St.Button({ label: "Reload", style_class: "devtools-contentButton" });
-            commandBox.add_actor(reloadButton);
+            let reloadButton = new St.Button({ label: "Reload", x_align: St.Align.END, style_class: "devtools-contentButton" });
+            buttonBox.add_actor(reloadButton);
             reloadButton.connect("clicked", Lang.bind(this, function() {
                 Extension.unloadExtension(meta.uuid);
                 Extension.loadExtension(meta.uuid, this.info);
             }));
             
             //remove
-            let removeButton = new St.Button({ label: "Remove", style_class: "devtools-contentButton" });
-            commandBox.add_actor(removeButton);
+            let removeButton = new St.Button({ label: "Remove", x_align: St.Align.END, style_class: "devtools-contentButton" });
+            buttonBox.add_actor(removeButton);
             removeButton.connect("clicked", Lang.bind(this, this.removeAll));
             
-            //check for multi-instance
+            /*check for multi-instance*/
             if ( meta["max-instances"] && meta["max-instances"] > 1 ) {
                 let instanceDropdown = new CollapseButton("Instances: "+this.instances.length+" of "+meta["max-instances"], false, null);
-                infoBox.add_actor(instanceDropdown.actor);
+                table.add(instanceDropdown.actor, { row: 3, col: 0, col_span: 2, x_expand: false, x_align: St.Align.START });
                 
                 let instancesContainer = new St.BoxLayout({ vertical: true });
                 instanceDropdown.setChild(instancesContainer);
@@ -198,21 +385,20 @@ ExtensionBox.prototype = {
             else {
                 //highlight button
                 if ( this.type == "Applet" || this.type == "Desklet" ) {
-                    let highlightButton = new St.Button({ label: "Highlight" });
-                    commandBox.add_actor(highlightButton);
+                    let highlightButton = new St.Button({ label: "Highlight", x_align: St.Align.END });
+                    buttonBox.add_actor(highlightButton);
                     highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(meta.uuid, false); }));
                 }
             }
             
             //link to settings
             if ( !meta["hide-configuration"] && GLib.file_test(meta.path + "/settings-schema.json", GLib.FileTest.EXISTS)) {
-                let settingsButton = new St.Button({ label: "Settings", style_class: "devtools-contentButton" });
-                commandBox.add_actor(settingsButton);
+                let settingsButton = new St.Button({ label: "Settings", x_align: St.Align.END, style_class: "devtools-contentButton" });
+                buttonBox.add_actor(settingsButton);
                 settingsButton.connect("clicked", Lang.bind(this, function() {
                     Util.spawnCommandLine("cinnamon-settings applets " + meta.uuid);
                 }));
             }
-            infoBox.add_actor(commandBox);
             
         } catch(e) {
             global.logError(e);
@@ -267,62 +453,77 @@ ExtensionBox.prototype = {
 }
 
 
-function Window(window) {
+function WindowItem(window) {
     this._init(window);
 }
 
-Window.prototype = {
+WindowItem.prototype = {
     _init: function(window) {
-        
-        this.window = window;
-        this.app = Cinnamon.WindowTracker.get_default().get_window_app(this.window);
-        
-        this.window.connect("unmanaged", Lang.bind(this, this.destroy));
-        
-        this.actor = new St.BoxLayout({ style_class: "devtools-windows-windowBox" });
-        let iconBin = new St.Bin({ style_class: "devtools-windows-icon" });
-        this.actor.add_actor(iconBin);
-        let box = new St.BoxLayout({ vertical: true });
-        this.actor.add_actor(box);
-        
-        let icon = this.getIcon();
-        iconBin.set_child(icon);
-        
-        let titleBox = new St.BoxLayout();
-        box.add_actor(titleBox);
-        titleBox.add_actor(new St.Label({ text: "Title: ", width: 100 }));
-        let title = new St.Label({ text: window.title, style_class: "devtools-windows-title" });
-        titleBox.add_actor(title);
-        
-        let classBox = new St.BoxLayout();
-        box.add_actor(classBox);
-        classBox.add_actor(new St.Label({ text: "Class: ", width: 100 }));
-        let wmClass = new St.Label({ text: window.get_wm_class() });
-        classBox.add_actor(wmClass);
-        
-        let workspaceBox = new St.BoxLayout();
-        box.add_actor(workspaceBox);
-        workspaceBox.add_actor(new St.Label({ text: "Workspace: ", width: 100 }));
-        let workspace = new St.Label({ text: this.getWorkspace() });
-        workspaceBox.add_actor(workspace);
-        
-        let buttonBox = new St.BoxLayout({ style_class: "devtools-windows-buttonBox" });
-        box.add_actor(buttonBox);
-        
-        let inspectButton = new St.Button({ label: "Inspect", style_class: "devtools-contentButton" });
-        buttonBox.add_actor(inspectButton);
-        inspectButton.connect("clicked", Lang.bind(this, this.inspect));
-        
-        if ( this.workspace ) {
-            let switchToButton = new St.Button({ label: "Switch to", style_class: "devtools-contentButton" });
-            buttonBox.add_actor(switchToButton);
-            switchToButton.connect("clicked", Lang.bind(this, this.switchTo));
+        try {
+            
+            this.window = window;
+            this.app = Cinnamon.WindowTracker.get_default().get_window_app(this.window);
+            let wsName = this.getWorkspace();
+            
+            this.window.connect("unmanaged", Lang.bind(this, this.destroy));
+            
+            this.actor = new St.BoxLayout({ style_class: "devtools-windows-windowBox" });
+            
+            /*icon*/
+            let iconBin = new St.Bin({ style_class: "devtools-windows-icon" });
+            this.actor.add_actor(iconBin);
+            let icon = this.getIcon();
+            iconBin.set_child(icon);
+            
+            /*info*/
+            let infoBox = new St.BoxLayout({ vertical: true });
+            this.actor.add(infoBox, { expand: true });
+            
+            //window title
+            let titleBox = new St.BoxLayout();
+            infoBox.add_actor(titleBox);
+            titleBox.add_actor(new St.Label({ text: "Title: ", width: 100 }));
+            let title = new St.Label({ text: window.title, style_class: "devtools-windows-title" });
+            titleBox.add_actor(title);
+            
+            //window class
+            let classBox = new St.BoxLayout();
+            infoBox.add_actor(classBox);
+            classBox.add_actor(new St.Label({ text: "Class: ", width: 100 }));
+            let wmClass = new St.Label({ text: window.get_wm_class() });
+            classBox.add_actor(wmClass);
+            
+            //workspace
+            let workspaceBox = new St.BoxLayout();
+            infoBox.add_actor(workspaceBox);
+            workspaceBox.add_actor(new St.Label({ text: "Workspace: ", width: 100 }));
+            let workspace = new St.Label({ text: wsName });
+            workspaceBox.add_actor(workspace);
+            
+            /*window options*/
+            let buttonBox = new St.BoxLayout({ vertical: true, style_class: "devtools-windows-buttonBox" });
+            this.actor.add_actor(buttonBox);
+            
+            //inspect window
+            let inspectButton = new St.Button({ label: "Inspect", x_align: St.Align.END, style_class: "devtools-contentButton" });
+            buttonBox.add_actor(inspectButton);
+            inspectButton.connect("clicked", Lang.bind(this, this.inspect));
+            
+            //switch to
+            if ( this.workspace ) {
+                let switchToButton = new St.Button({ label: "Switch to", x_align: St.Align.END, style_class: "devtools-contentButton" });
+                buttonBox.add_actor(switchToButton);
+                switchToButton.connect("clicked", Lang.bind(this, this.switchTo));
+            }
+            
+            //close
+            let closeButton = new St.Button({ label: "Close", x_align: St.Align.END, style_class: "devtools-contentButton" });
+            buttonBox.add_actor(closeButton);
+            closeButton.connect("clicked", Lang.bind(this, this.close));
+            
+        } catch(e) {
+            global.logError(e);
         }
-        
-        let closeButton = new St.Button({ label: "Close", style_class: "devtools-contentButton" });
-        buttonBox.add_actor(closeButton);
-        closeButton.connect("clicked", Lang.bind(this, this.close));
-        
     },
     
     destroy: function() {
@@ -338,7 +539,7 @@ Window.prototype = {
     getWorkspace: function() {
         if ( this.window.is_on_all_workspaces() ) {
             this.workspace = "all";
-            return "all";
+            return "All";
         }
         
         for ( let wsId = 0; wsId < global.screen.n_workspaces; wsId++ ) {
@@ -371,11 +572,11 @@ Window.prototype = {
 }
 
 
-function Command(command, pId, inId, outId, errId, output) {
+function CommandItem(command, pId, inId, outId, errId, output) {
     this._init(command, pId, inId, outId, errId, output);
 }
 
-Command.prototype = {
+CommandItem.prototype = {
     _init: function(command, pId, inId, outId, errId) {
         this.pId = pId;
         this.inId = inId;
@@ -384,13 +585,13 @@ Command.prototype = {
         
         this.actor = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processBox" });
         
-        //header
+        /**header**/
         let headerBox = new St.BoxLayout();
         this.actor.add_actor(headerBox);
+        
+        /*info*/
         let infoBox = new St.BoxLayout({ vertical: true });
         headerBox.add(infoBox, { expand: true });
-        let toolBox = new St.BoxLayout({ vertical: true });
-        headerBox.add_actor(toolBox);
         
         //command
         let commandBox = new St.BoxLayout();
@@ -406,6 +607,10 @@ Command.prototype = {
         this.status = new St.Label({ text: "Running" });
         statusBox.add_actor(this.status);
         
+        /*command options*/
+        let toolBox = new St.BoxLayout({ vertical: true });
+        headerBox.add_actor(toolBox);
+        
         //clear button
         let clearButton = new St.Button({ label: "Clear", style_class: "devtools-contentButton" });
         toolBox.add_actor(clearButton);
@@ -416,6 +621,7 @@ Command.prototype = {
         toolBox.add_actor(this.stopButton);
         this.stopButton.connect("clicked", Lang.bind(this, this.endProcess));
         
+        /*output*/
         //output toggle
         let toggleBox = new St.BoxLayout();
         this.actor.add_actor(toggleBox);
@@ -429,7 +635,7 @@ Command.prototype = {
         this.output.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         this.output.clutter_text.line_wrap = true;
         
-        //open streams and start reading
+        /*open streams and start reading*/
         let uiStream = new Gio.UnixInputStream({ fd: this.outId });
         this.input = new Gio.DataInputStream({ base_stream: uiStream });
         Mainloop.idle_add(Lang.bind(this, this.readNext));
@@ -509,7 +715,7 @@ Terminal.prototype = {
                 separator._drawingArea.add_style_class_name("devtools-separator");
             }
             
-            let command = new Command(input, pId, inId, outId, errId);
+            let command = new CommandItem(input, pId, inId, outId, errId);
             this.output.add_actor(command.actor);
             this.processes.push(command);
             
@@ -549,6 +755,7 @@ Terminal.prototype = {
 }
 
 
+//interfaces
 function GenericInterface() {
     this._init();
 }
@@ -647,7 +854,7 @@ WindowInterface.prototype = {
             
             let window = windows[i].metaWindow;
             
-            let windowBox = new Window(window);
+            let windowBox = new WindowItem(window);
             this.windowsBox.add_actor(windowBox.actor);
             this.windowObjects.push(windowBox);
             hasChild = true;
@@ -881,7 +1088,7 @@ ExtensionInterface.prototype = {
                     separator._drawingArea.add_style_class_name("devtools-separator");
                 }
                 
-                let extension = new ExtensionBox(meta, this.info.name);
+                let extension = new ExtensionItem(meta, this.info.name);
                 this.extensionBox.add_actor(extension.actor);
                 
                 hasChild = true;
@@ -895,170 +1102,6 @@ ExtensionInterface.prototype = {
         Mainloop.idle_add(Lang.bind(this, this.reload));
     }
 }
-
-
-function Menu(icon, tooltip, styleClass) {
-    this._init(icon, tooltip, styleClass);
-}
-
-Menu.prototype = {
-    _init: function(icon, tooltip, styleClass) {
-        try {
-            
-            this.actor = new St.Button({ style_class: styleClass });
-            this.actor.set_child(icon);
-            new Tooltips.Tooltip(this.actor, tooltip);
-            
-            this.menuManager = new PopupMenu.PopupMenuManager(this);
-            this.menu = new PopupMenu.PopupMenu(this.actor, 0.0, St.Side.TOP, 0);
-            this.menuManager.addMenu(this.menu);
-            Main.uiGroup.add_actor(this.menu.actor);
-            this.menu.actor.hide();
-            
-            this.actor.connect("clicked", Lang.bind(this, this.activate));
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    activate: function() {
-        this.menu.toggle();
-    },
-    
-    addMenuItem: function(title, callback, icon) {
-        let menuItem = new PopupMenu.PopupBaseMenuItem();
-        if ( icon ) menuItem.addActor(icon);
-        let label = new St.Label({ text: title });
-        menuItem.addActor(label);
-        menuItem.connect("activate", callback);
-        this.menu.addMenuItem(menuItem);
-    },
-    
-    addSeparator: function() {
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    }
-}
-
-
-function RaisedBox() {
-    this._init();
-}
-
-RaisedBox.prototype = {
-    _init: function() {
-        try {
-            
-            this.stageEventIds = [];
-            this.settingsMenuEvents = [];
-            this.contextMenuEvents = [];
-            
-            this.actor = new St.Group({ visible: false, x: 0, y: 0 });
-            Main.uiGroup.add_actor(this.actor);
-            let constraint = new Clutter.BindConstraint({ source: global.stage,
-                                                          coordinate: Clutter.BindCoordinate.POSITION | Clutter.BindCoordinate.SIZE });
-            this.actor.add_constraint(constraint);
-            
-            this._backgroundBin = new St.Bin();
-            this.actor.add_actor(this._backgroundBin);
-            let monitor = Main.layoutManager.focusMonitor;
-            this._backgroundBin.set_position(monitor.x, monitor.y);
-            this._backgroundBin.set_size(monitor.width, monitor.height);
-            
-            let stack = new Cinnamon.Stack();
-            this._backgroundBin.child = stack;
-            
-            this.eventBlocker = new Clutter.Group({ reactive: true });
-            stack.add_actor(this.eventBlocker);
-            
-            this.groupContent = new St.Bin();
-            stack.add_actor(this.groupContent);
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    add: function(desklet) {
-        try {
-            
-            this.desklet = desklet;
-            this.settingsMenu = this.desklet.settingsMenu.menu;
-            this.contextMenu = this.desklet._menu;
-            
-            this.groupContent.add_actor(this.desklet.actor);
-            
-            this.actor.show();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-            global.focus_manager.add_group(this.actor);
-            
-            this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
-            this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
-            this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
-            this.settingsMenuEvents.push(this.settingsMenu.connect("activate", Lang.bind(this, function() {
-                this.emit("closed");
-            })));
-            this.settingsMenuEvents.push(this.settingsMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
-                if ( !open ) {
-                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-                }
-            })));
-            this.contextMenuEvents.push(this.contextMenu.connect("activate", Lang.bind(this, function() {
-                this.emit("closed");
-            })));
-            this.contextMenuEvents.push(this.contextMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
-                if ( !open ) {
-                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-                }
-            })));
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    remove: function() {
-        try {
-            
-            for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
-            for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
-            for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
-            
-            if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
-            
-            this.actor.destroy();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    onStageEvent: function(actor, event) {
-        try {
-            
-            let type = event.type();
-            let target = event.get_source();
-            
-//let name = target.get_name();
-//global.log(name == "terminalInput");
-            if ( target.name == "terminalInput" ) return false;
-            
-            if ( type == Clutter.EventType.KEY_PRESS || type == Clutter.EventType.KEY_RELEASE ) return true;
-            
-            if ( target == this.desklet.actor || this.desklet.actor.contains(target) ||
-                 target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
-                 target == this.contextMenu.actor || this.contextMenu.actor.contains(target) ) return false;
-            if ( type == Clutter.EventType.BUTTON_RELEASE ) this.emit("closed");
-            
-        } catch(e) {
-            global.logError(e);
-        }
-        
-        return true;
-    }
-}
-Signals.addSignalMethods(RaisedBox.prototype);
 
 
 function myDesklet(metadata, desklet_id) {
