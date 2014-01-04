@@ -403,20 +403,19 @@ ExtensionItem.prototype = {
     },
     
     reload: function() {
-        //global.log("hello");
         Extension.unloadExtension(this.meta.uuid);
         Extension.loadExtension(this.meta.uuid, this.type);
     },
     
     remove: function(id) {
         switch ( this.type ) {
-            case "Applet":
+            case Extension.Type.APPLET:
                 AppletManager._removeAppletFromPanel(null, null, null, this.meta.uuid, id);
                 break;
-            case "Desklet":
+            case Extension.Type.DESKLET:
                 DeskletManager.removeDesklet(this.meta.uuid, id);
                 break;
-            case "Extension":
+            case Extension.Type.EXTENSION:
                 Extension.unloadExtension(meta.uuid);
                 break;
         }
@@ -426,7 +425,7 @@ ExtensionItem.prototype = {
         for ( let i = 0; i < this.instances.length; i++ ) {
             let instance = this.instances[i];
             let id;
-            if ( this.type == "Applet" ) id = instance.applet_id;
+            if ( this.type == Extension.Type.APPLET ) id = instance.applet_id;
             else id = instance.desklet_id;
             this.remove(id);
         }
@@ -435,11 +434,11 @@ ExtensionItem.prototype = {
     highlight: function(id, isInstance) {
         let obj = null;
         if ( isInstance ) {
-            if ( this.type == "Applet" ) obj = AppletManager.get_object_for_instance(id);
+            if ( this.type == Extension.Type.APPLET ) obj = AppletManager.get_object_for_instance(id);
             else obj = DeskletManager.get_object_for_instance(id)
         }
         else {
-            if ( this.type == "Applet" )obj = AppletManager.get_object_for_uuid(id)
+            if ( this.type == Extension.Type.APPLET )obj = AppletManager.get_object_for_uuid(id)
             else obj = DeskletManager.get_object_for_uuid(id)
         }
         if ( !obj ) return;
