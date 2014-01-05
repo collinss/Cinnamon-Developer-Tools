@@ -61,8 +61,9 @@ function initializeInterfaces() {
     ];
 }
 
-
-//widgets
+/************************************************
+/widgets
+************************************************/
 function CollapseButton(label, startState, child) {
     this._init(label, startState, child);
 }
@@ -160,138 +161,6 @@ Menu.prototype = {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
     }
 }
-
-
-function RaisedBox() {
-    this._init();
-}
-
-RaisedBox.prototype = {
-    _init: function() {
-        try {
-            
-            this.stageEventIds = [];
-            this.settingsMenuEvents = [];
-            this.contextMenuEvents = [];
-            
-            this.actor = new St.Group({ visible: false, x: 0, y: 0 });
-            Main.uiGroup.add_actor(this.actor);
-            let constraint = new Clutter.BindConstraint({ source: global.stage,
-                                                          coordinate: Clutter.BindCoordinate.POSITION | Clutter.BindCoordinate.SIZE });
-            this.actor.add_constraint(constraint);
-            
-            this._backgroundBin = new St.Bin();
-            this.actor.add_actor(this._backgroundBin);
-            let monitor = Main.layoutManager.focusMonitor;
-            this._backgroundBin.set_position(monitor.x, monitor.y);
-            this._backgroundBin.set_size(monitor.width, monitor.height);
-            
-            let stack = new Cinnamon.Stack();
-            this._backgroundBin.child = stack;
-            
-            this.eventBlocker = new Clutter.Group({ reactive: true });
-            stack.add_actor(this.eventBlocker);
-            
-            this.groupContent = new St.Bin();
-            stack.add_actor(this.groupContent);
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    add: function(desklet) {
-        try {
-            
-            this.desklet = desklet;
-            this.settingsMenu = this.desklet.settingsMenu.menu;
-            this.contextMenu = this.desklet._menu;
-            
-            this.groupContent.add_actor(this.desklet.actor);
-            
-            this.actor.show();
-            //we set the input mode to focused first to grab keyboard events
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
-            global.stage.set_key_focus(this.actor);
-            this.actor.grab_key_focus();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-            global.focus_manager.add_group(this.actor);
-            
-            //we must capture all events to avoid undesired effects
-            this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
-            this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
-            this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
-            this.settingsMenuEvents.push(this.settingsMenu.connect("activate", Lang.bind(this, function() {
-                this.emit("closed");
-            })));
-            this.settingsMenuEvents.push(this.settingsMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
-                if ( !open ) {
-                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-                }
-            })));
-            this.contextMenuEvents.push(this.contextMenu.connect("activate", Lang.bind(this, function() {
-                this.emit("closed");
-            })));
-            this.contextMenuEvents.push(this.contextMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
-                if ( !open ) {
-                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-                }
-            })));
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    remove: function() {
-        try {
-            
-            for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
-            for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
-            for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
-            object_has_key_focus = false; //if any object had focus, we don't want it to now
-            
-            if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
-            
-            this.actor.destroy();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    onStageEvent: function(actor, event) {
-        try {
-            
-            let type = event.type();
-            let target = event.get_source();
-            
-            if ( type == Clutter.EventType.KEY_RELEASE ) return true;
-            if ( type == Clutter.EventType.KEY_PRESS ) {
-                //escape lowers the desklet
-                if ( event.get_key_symbol() == Clutter.KEY_Escape ) this.emit("closed");
-                //only send keyboard events when the desired actor is focused
-                else if ( object_has_key_focus ) return false;
-                else return true;
-            }
-            
-            //we don't want to block events that belong to the desklet
-            if ( target == this.desklet.actor      || this.desklet.actor.contains(target) ||
-                 target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
-                 target == this.contextMenu.actor  || this.contextMenu.actor.contains(target) ) return false;
-            
-            //lower the desklet if the user clicks anywhere but on the desklet or it
-            if ( type == Clutter.EventType.BUTTON_RELEASE ) this.emit("closed");
-            
-        } catch(e) {
-            global.logError(e);
-        }
-        
-        return true;
-    }
-}
-Signals.addSignalMethods(RaisedBox.prototype);
 
 
 function ExtensionItem(meta, type) {
@@ -677,11 +546,13 @@ CommandItem.prototype = {
     
     clear: function() {
         this.actor.destroy();
-        this.delete();
     }
 }
 
 
+/************************************************
+/Terminal
+************************************************/
 function Terminal() {
     this._init();
 }
@@ -777,7 +648,144 @@ Terminal.prototype = {
 }
 
 
-//interfaces
+/************************************************
+/Raised Box
+************************************************/
+function RaisedBox() {
+    this._init();
+}
+
+RaisedBox.prototype = {
+    _init: function() {
+        try {
+            
+            this.stageEventIds = [];
+            this.settingsMenuEvents = [];
+            this.contextMenuEvents = [];
+            
+            this.actor = new St.Group({ visible: false, x: 0, y: 0 });
+            Main.uiGroup.add_actor(this.actor);
+            let constraint = new Clutter.BindConstraint({ source: global.stage,
+                                                          coordinate: Clutter.BindCoordinate.POSITION | Clutter.BindCoordinate.SIZE });
+            this.actor.add_constraint(constraint);
+            
+            this._backgroundBin = new St.Bin();
+            this.actor.add_actor(this._backgroundBin);
+            let monitor = Main.layoutManager.focusMonitor;
+            this._backgroundBin.set_position(monitor.x, monitor.y);
+            this._backgroundBin.set_size(monitor.width, monitor.height);
+            
+            let stack = new Cinnamon.Stack();
+            this._backgroundBin.child = stack;
+            
+            this.eventBlocker = new Clutter.Group({ reactive: true });
+            stack.add_actor(this.eventBlocker);
+            
+            this.groupContent = new St.Bin();
+            stack.add_actor(this.groupContent);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    add: function(desklet) {
+        try {
+            
+            this.desklet = desklet;
+            this.settingsMenu = this.desklet.settingsMenu.menu;
+            this.contextMenu = this.desklet._menu;
+            
+            this.groupContent.add_actor(this.desklet.actor);
+            
+            this.actor.show();
+            //we set the input mode to focused first to grab keyboard events
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+            global.stage.set_key_focus(this.actor);
+            this.actor.grab_key_focus();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+            global.focus_manager.add_group(this.actor);
+            
+            //we must capture all events to avoid undesired effects
+            this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
+            this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
+            this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
+            this.settingsMenuEvents.push(this.settingsMenu.connect("activate", Lang.bind(this, function() {
+                this.emit("closed");
+            })));
+            this.settingsMenuEvents.push(this.settingsMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
+                if ( !open ) {
+                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+                }
+            })));
+            this.contextMenuEvents.push(this.contextMenu.connect("activate", Lang.bind(this, function() {
+                this.emit("closed");
+            })));
+            this.contextMenuEvents.push(this.contextMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
+                if ( !open ) {
+                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+                }
+            })));
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    remove: function() {
+        try {
+            
+            for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
+            for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
+            for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
+            object_has_key_focus = false; //if any object had focus, we don't want it to now
+            
+            if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
+            
+            this.actor.destroy();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    onStageEvent: function(actor, event) {
+        try {
+            
+            let type = event.type();
+            let target = event.get_source();
+            
+            if ( type == Clutter.EventType.KEY_RELEASE ) return true;
+            if ( type == Clutter.EventType.KEY_PRESS ) {
+                //escape lowers the desklet
+                if ( event.get_key_symbol() == Clutter.KEY_Escape ) this.emit("closed");
+                //only send keyboard events when the desired actor is focused
+                else if ( object_has_key_focus ) return false;
+                else return true;
+            }
+            
+            //we don't want to block events that belong to the desklet
+            if ( target == this.desklet.actor      || this.desklet.actor.contains(target) ||
+                 target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
+                 target == this.contextMenu.actor  || this.contextMenu.actor.contains(target) ) return false;
+            
+            //lower the desklet if the user clicks anywhere but on the desklet or it
+            if ( type == Clutter.EventType.BUTTON_RELEASE ) this.emit("closed");
+            
+        } catch(e) {
+            global.logError(e);
+        }
+        
+        return true;
+    }
+}
+Signals.addSignalMethods(RaisedBox.prototype);
+
+
+/************************************************
+/interfaces
+************************************************/
 function GenericInterface() {
     this._init();
 }
