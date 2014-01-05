@@ -46,6 +46,7 @@ const SETTINGS_PAGES = [
 let button_base_path;
 let command_output_start_state;
 let desklet_raised = false;
+let object_has_key_focus = false;
 
 
 function initializeInterfaces() {
@@ -209,9 +210,14 @@ RaisedBox.prototype = {
             this.groupContent.add_actor(this.desklet.actor);
             
             this.actor.show();
+            //we set the input mode to focused first to grab keyboard events
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+            global.stage.set_key_focus(this.actor);
+            this.actor.grab_key_focus();
             global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
             global.focus_manager.add_group(this.actor);
             
+            //we must capture all events to avoid undesired effects
             this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
             this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
             this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
@@ -243,6 +249,7 @@ RaisedBox.prototype = {
             for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
             for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
             for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
+            object_has_key_focus = false; //if any object had focus, we don't want it to now
             
             if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
             
@@ -260,13 +267,21 @@ RaisedBox.prototype = {
             let type = event.type();
             let target = event.get_source();
             
-            if ( target.name == "terminalInput" ) return false;
+            if ( type == Clutter.EventType.KEY_RELEASE ) return true;
+            if ( type == Clutter.EventType.KEY_PRESS ) {
+                //escape lowers the desklet
+                if ( event.get_key_symbol() == Clutter.KEY_Escape ) this.emit("closed");
+                //only send keyboard events when the desired actor is focused
+                else if ( object_has_key_focus ) return false;
+                else return true;
+            }
             
-            if ( type == Clutter.EventType.KEY_PRESS || type == Clutter.EventType.KEY_RELEASE ) return true;
-            
+            //we don't want to block events that belong to the desklet
             if ( target == this.desklet.actor      || this.desklet.actor.contains(target) ||
                  target == this.settingsMenu.actor || this.settingsMenu.actor.contains(target) ||
                  target == this.contextMenu.actor  || this.contextMenu.actor.contains(target) ) return false;
+            
+            //lower the desklet if the user clicks anywhere but on the desklet or it
             if ( type == Clutter.EventType.BUTTON_RELEASE ) this.emit("closed");
             
         } catch(e) {
@@ -322,12 +337,8 @@ ExtensionItem.prototype = {
             
             //description
             table.add(new St.Label({ text: "Description:  " }), { row: 1, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
-            //let bin = new St.Bin({  });
             let description = new St.Label({ text: "" });
-            //description.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-            //description.clutter_text.line_wrap = true;
             table.add(description, { row: 1, col: 1, col_span: 1, y_expand: true, x_expand: false, x_align: St.Align.START });
-            //bin.add_actor(description);
             description.set_text(meta.description);
             
             //status
@@ -737,20 +748,29 @@ Terminal.prototype = {
     },
     
     enter: function() {
-        let currentMode = global.stage_input_mode;
-        if ( currentMode != Cinnamon.StageInputMode.FOCUSED ) {
-            this.previousMode = currentMode;
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+        if ( desklet_raised ) {
+            object_has_key_focus = true;
         }
-        
-        this.input.grab_key_focus();
-        
+        else {
+            let currentMode = global.stage_input_mode;
+            if ( currentMode != Cinnamon.StageInputMode.FOCUSED ) {
+                this.previousMode = currentMode;
+                global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+            }
+            
+            this.input.grab_key_focus();
+        }
         if ( !this.leaveEventId ) this.leaveEventId = this.input.connect("key-focus-out", Lang.bind(this, this.leave));
     },
     
     leave: function() {
-        if ( this.previousMode ) global.set_stage_input_mode(this.previousMode);
-        this.previousMode = null;
+        if ( desklet_raised ) {
+            object_has_key_focus = false;
+        }
+        else {
+            if ( this.previousMode ) global.set_stage_input_mode(this.previousMode);
+            this.previousMode = null;
+        }
         
         if ( this.leaveEventId ) this.input.disconnect(this.leaveEventId);
     }
@@ -1180,7 +1200,7 @@ myDesklet.prototype = {
         if ( desklet_raised || this.changingRaiseState ) return;
         this.changingRaiseState = true;
         
-        this._draggable.inhibit = false;
+        this._draggable.inhibit = true;
         this.raisedBox = new RaisedBox();
         
         let position = this.actor.get_position();

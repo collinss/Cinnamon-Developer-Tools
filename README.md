@@ -15,6 +15,7 @@ Done
     Open windows interface
     Reload theme button
     Fix x-let reload code function
+    Fix bug with entry in raised mode
 
 Wish-list
 ---------
