@@ -29,6 +29,13 @@
         "tooltip": "Uncheck to have it hidden initially"
     },
     
+    "xsessionHideOld": {
+        "type": "checkbox",
+        "description": "Hide old xsession errors",
+        "default": true,
+        "tooltip": "Setting this will only display entries posted since cinnamon was started (or restarted)"
+    },
+    
     "raiseKey": {
         "type": "keybinding",
         "description": "Raise to top shorcut key",

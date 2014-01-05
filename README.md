@@ -1,6 +1,5 @@
 To-Do
 -----
-    Double-check theme asthetics
 
 Done
 ----
@@ -16,6 +15,8 @@ Done
     Reload theme button
     Fix x-let reload code function
     Fix bug with entry in raised mode
+    x-session 
+    Double-check theme asthetics
 
 Wish-list
 ---------

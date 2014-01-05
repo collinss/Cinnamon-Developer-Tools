@@ -45,6 +45,7 @@ const SETTINGS_PAGES = [
 //global variables
 let button_base_path;
 let command_output_start_state;
+let xsession_hide_old;
 let desklet_raised = false;
 let object_has_key_focus = false;
 
@@ -200,18 +201,18 @@ ExtensionItem.prototype = {
             infoBox.add(table, { y_align: St.Align.MIDDLE, y_expand: false });
             
             //name
-            table.add(new St.Label({ text: "Name:  " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
+            table.add(new St.Label({ text: "Name:   " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
             let name = new St.Label({ text: meta.name+" ("+meta.uuid+")" });
             table.add(name, { row: 0, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
             //description
-            table.add(new St.Label({ text: "Description:  " }), { row: 1, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
+            table.add(new St.Label({ text: "Description:   " }), { row: 1, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
             let description = new St.Label({ text: "" });
             table.add(description, { row: 1, col: 1, col_span: 1, y_expand: true, x_expand: false, x_align: St.Align.START });
             description.set_text(meta.description);
             
             //status
-            table.add(new St.Label({ text: "Status: " }), { row: 2, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
+            table.add(new St.Label({ text: "Status:   " }), { row: 2, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
             let status = new St.Label({ text: Extension.getMetaStateString(meta.state) });
             table.add(status, { row: 2, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
@@ -360,27 +361,23 @@ WindowItem.prototype = {
             /*info*/
             let infoBox = new St.BoxLayout({ vertical: true });
             this.actor.add(infoBox, { expand: true });
+            let table = new St.Table({ homogeneous: false, clip_to_allocation: true });
+            infoBox.add(table, { y_align: St.Align.MIDDLE, y_expand: false });
             
             //window title
-            let titleBox = new St.BoxLayout();
-            infoBox.add_actor(titleBox);
-            titleBox.add_actor(new St.Label({ text: "Title: ", width: 100 }));
+            table.add(new St.Label({ text: "Title:   " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
             let title = new St.Label({ text: window.title, style_class: "devtools-windows-title" });
-            titleBox.add_actor(title);
+            table.add(title, { row: 0, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
             //window class
-            let classBox = new St.BoxLayout();
-            infoBox.add_actor(classBox);
-            classBox.add_actor(new St.Label({ text: "Class: ", width: 100 }));
+            table.add(new St.Label({ text: "Class:   " }), { row: 1, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
             let wmClass = new St.Label({ text: window.get_wm_class() });
-            classBox.add_actor(wmClass);
+            table.add(wmClass, { row: 1, col: 1, col_span: 1, y_expand: true, x_expand: false, x_align: St.Align.START });
             
             //workspace
-            let workspaceBox = new St.BoxLayout();
-            infoBox.add_actor(workspaceBox);
-            workspaceBox.add_actor(new St.Label({ text: "Workspace: ", width: 100 }));
+            table.add(new St.Label({ text: "Workspace:   " }), { row: 2, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
             let workspace = new St.Label({ text: wsName });
-            workspaceBox.add_actor(workspace);
+            table.add(workspace, { row: 2, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
             /*window options*/
             let buttonBox = new St.BoxLayout({ vertical: true, style_class: "devtools-windows-buttonBox" });
@@ -474,33 +471,31 @@ CommandItem.prototype = {
         /*info*/
         let infoBox = new St.BoxLayout({ vertical: true });
         headerBox.add(infoBox, { expand: true });
+        let table = new St.Table({ homogeneous: false, clip_to_allocation: true });
+        infoBox.add(table, { y_align: St.Align.MIDDLE, y_expand: false });
         
         //command
-        let commandBox = new St.BoxLayout();
-        infoBox.add_actor(commandBox);
-        commandBox.add_actor(new St.Label({ text: "Command: ", width: 100 }));
+        table.add(new St.Label({ text: "Command:   " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
         let commandLabel = new St.Label({ text: command });
-        commandBox.add_actor(commandLabel);
+        table.add(commandLabel, { row: 0, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
         
         //status
-        let statusBox = new St.BoxLayout();
-        infoBox.add_actor(statusBox);
-        statusBox.add_actor(new St.Label({ text: "Status: ", width: 100 }));
+        table.add(new St.Label({ text: "Status:   " }), { row: 1, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
         this.status = new St.Label({ text: "Running" });
-        statusBox.add_actor(this.status);
+        table.add(this.status, { row: 1, col: 1, col_span: 1, y_expand: true, x_expand: false, x_align: St.Align.START });
         
         /*command options*/
-        let toolBox = new St.BoxLayout({ vertical: true });
-        headerBox.add_actor(toolBox);
+        let buttonBox = new St.BoxLayout({ vertical: true });
+        headerBox.add_actor(buttonBox);
         
         //clear button
-        let clearButton = new St.Button({ label: "Clear", style_class: "devtools-contentButton" });
-        toolBox.add_actor(clearButton);
+        let clearButton = new St.Button({ label: "Clear", x_align: St.Align.END, style_class: "devtools-contentButton" });
+        buttonBox.add_actor(clearButton);
         clearButton.connect("clicked", Lang.bind(this, this.clear));
         
         //end process button
-        this.stopButton = new St.Button({ label: "End Process", style_class: "devtools-contentButton" });
-        toolBox.add_actor(this.stopButton);
+        this.stopButton = new St.Button({ label: "End Process", x_align: St.Align.END, style_class: "devtools-contentButton" });
+        buttonBox.add_actor(this.stopButton);
         this.stopButton.connect("clicked", Lang.bind(this, this.endProcess));
         
         /*output*/
@@ -1043,7 +1038,11 @@ XSessionLogInterface.prototype = {
                 let lines = String(file.load_contents_finish(result)[1]).split("\n");
                 this.end = lines.length - 1;
                 for ( let i = this.start; i < lines.length; i++ ) {
-                    text += lines[i] + "\n";
+                    let line = lines[i];
+                    if ( xsession_hide_old && line.search("About to start Cinnamon") > -1 ) {
+                        text = ""
+                    }
+                    text += line + "\n";
                 }
                 
                 if ( this.contentText.text != text ) {
@@ -1179,6 +1178,10 @@ myDesklet.prototype = {
             command_output_start_state = this.terminalOutputShow;
         });
         command_output_start_state = this.terminalOutputShow;
+        this.settings.bindProperty(Settings.BindingDirection.IN, "xsessionHideOld", "xsessionHideOld", function() {
+            xsession_hide_old = this.xsessionHideOld;
+        });
+        xsession_hide_old = this.xsessionHideOld;
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
         this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.reselectCurrent);
         this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.reselectCurrent);
