@@ -1331,7 +1331,7 @@ myDesklet.prototype = {
             let command = "cinnamon-settings " + SETTINGS_PAGES[i].page;
             this.settingsMenu.addMenuItem(SETTINGS_PAGES[i].title,
                              function() { Util.spawnCommandLine(command); },
-                             new St.Icon({ icon_name: SETTINGS_PAGES[i].page, icon_size: POPUP_MENU_ICON_SIZE, icon_type: St.IconType.FULLCOLOR }));
+                             new St.Icon({ icon_name: "cs-" + SETTINGS_PAGES[i].page, icon_size: POPUP_MENU_ICON_SIZE, icon_type: St.IconType.FULLCOLOR }));
         }
     },
     
