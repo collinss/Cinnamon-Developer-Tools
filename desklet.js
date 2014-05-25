@@ -14,6 +14,7 @@ const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
+const Gtk = imports.gi.Gtk;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 
@@ -55,6 +56,7 @@ function initializeInterfaces() {
         new CinnamonLogInterface(),
         new XSessionLogInterface(),
         new TerminalInterface(),
+        new SandboxInterface(),
         new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
         new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
         new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
@@ -815,7 +817,7 @@ GenericInterface.prototype = {
         }
     },
     
-    _formatTime: function(d){
+    _formatTime: function(d) {
         function pad(n) { return n < 10 ? "0" + n : n; }
         return (d.getMonth()+1)+"/"
             + pad(d.getDate())+" "
@@ -1133,6 +1135,87 @@ ExtensionInterface.prototype = {
 }
 
 
+function SandboxInterface() {
+    this._init();
+}
+
+SandboxInterface.prototype = {
+    __proto__: GenericInterface.prototype,
+    
+    name: _("Sandbox"),
+    
+    _init: function() {
+        GenericInterface.prototype._init.call(this);
+        
+        let entryScrollBox = new St.ScrollView({ height: 120, style_class: "devtools-sandbox-entryScrollBox" });
+        this.panel.add_actor(entryScrollBox);
+        entryScrollBox.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+        let box = new St.BoxLayout({ vertical: true });
+        entryScrollBox.add_actor(box);
+        let padding = new St.Bin({ reactive: true });
+        box.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
+        
+        this.entryBox = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
+        box.add_actor(this.entryBox);
+        this.entryBox.set_clip_to_allocation(false);
+        this.entryBox.clutter_text.set_single_line_mode(false);
+        this.entryBox.clutter_text.set_activatable(false);
+        this.entryBox.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this.entryBox.clutter_text.line_wrap = true;
+        this.entryBox.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
+        
+        let buttonBox = new St.BoxLayout({ style_class: "devtools-sandbox-buttonBox" });
+        this.panel.add_actor(buttonBox);
+        let evaluateButton = new St.Button({ label: "Evaluate", style_class: "devtools-button" });
+        buttonBox.add_actor(evaluateButton);
+        evaluateButton.connect("clicked", Lang.bind(this, this.evaluate));
+        
+        let previewer = new St.Bin({ style_class: "devtools-sandbox-previewer" });
+        this.panel.add(previewer, { expand: true });
+        this.previewObject = new St.BoxLayout();
+        previewer.add_actor(this.previewObject);
+        
+        this.entryBox.clutter_text.connect("button_press_event", Lang.bind(this, this.enter));
+        entryScrollBox.connect("button_press_event", Lang.bind(this, this.enter));
+    },
+    
+    evaluate: function() {
+        let style = this.entryBox.text;
+        
+        this.previewObject.set_style(style);
+        
+    },
+    
+    enter: function() {
+        if ( desklet_raised ) {
+            object_has_key_focus = true;
+        }
+        else {
+            let currentMode = global.stage_input_mode;
+            if ( currentMode != Cinnamon.StageInputMode.FOCUSED ) {
+                this.previousMode = currentMode;
+                global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+            }
+            
+            this.entryBox.grab_key_focus();
+        }
+        if ( !this.leaveEventId ) this.leaveEventId = this.entryBox.connect("key-focus-out", Lang.bind(this, this.leave));
+    },
+    
+    leave: function() {
+        if ( desklet_raised ) {
+            object_has_key_focus = false;
+        }
+        else {
+            if ( this.previousMode ) global.set_stage_input_mode(this.previousMode);
+            this.previousMode = null;
+        }
+        
+        if ( this.leaveEventId ) this.entryBox.disconnect(this.leaveEventId);
+    }
+}
+
+
 function myDesklet(metadata, desklet_id) {
     this._init(metadata, desklet_id);
 }
@@ -1311,10 +1394,14 @@ myDesklet.prototype = {
         this.interfaceBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: true/*, height: this.height, width: this.width*/ });
         this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
         for ( let i in this.interfaces ) {
-            this.interfaceBox.add_actor(this.interfaces[i].panel);
-            let tab = this.interfaces[i].tab;
-            this.tabBox.add_actor(tab);
-            tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
+            try {
+                this.interfaceBox.add_actor(this.interfaces[i].panel);
+                let tab = this.interfaces[i].tab;
+                this.tabBox.add_actor(tab);
+                tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
+            } catch(e) {
+                global.logError(e);
+            }
         }
         this.contentArea.add_actor(this.interfaceBox);
         this.contentArea.add_actor(this.tabBox);

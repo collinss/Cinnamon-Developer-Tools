@@ -78,8 +78,26 @@
 }
 
 .devtools-separator {
-    /*uncomment these lines to make separators disapear*/
+    /*uncomment these lines to make separators disappear*/
     /*-gradient-height: 0px;*/
     /*-margin-horizontal: 0px;*/
     /*height: 0px;*/
+}
+
+.devtools-sandbox-entryScrollBox {
+    background-color: #ffffff;
+    height: 10em;
+}
+
+.devtools-sandbox-entry {
+    color: #000000;
+}
+
+.devtools-sandbox-buttonBox {
+    spacing: 5px;
+}
+
+.devtools-sandbox-previewer {
+    padding: 10px;
+    border: solid 1px gold;
 }
