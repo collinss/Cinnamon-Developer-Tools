@@ -24,6 +24,9 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Signals = imports.signals;
 
+imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
+const Tab = imports.tab;
+
 //global constants
 const POPUP_MENU_ICON_SIZE = 24;
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
@@ -788,33 +791,17 @@ function GenericInterface() {
 }
 
 GenericInterface.prototype = {
+    __proto__: Tab.TabItemBase.prototype,
+    
     name: _("Untitled"),
     
     _init: function() {
+        Tab.TabItemBase.prototype._init.call(this);
         
-        //create panel
         this.panel = new St.BoxLayout({ style_class: "devtools-panel", vertical: true });
-        this.panel.hide();
+        this.setContent(this.panel);
         
-        //generate tab
-        this.tab = new St.Button({ label: this.name, style_class: "devtools-tab" });
-        
-    },
-    
-    setSelect: function(select, height, width) {
-        if ( select ) {
-            this.selected = true;
-            this.panel.height = height;
-            this.panel.width = width;
-            this.onSelected();
-            this.panel.show();
-            this.tab.add_style_pseudo_class("selected");
-        }
-        else {
-            this.panel.hide();
-            this.tab.remove_style_pseudo_class("selected");
-            this.selected = false;
-        }
+        this.setTabContent(new St.Label({ text: this.name }));
     },
     
     _formatTime: function(d) {
@@ -824,10 +811,6 @@ GenericInterface.prototype = {
             + (d.getHours())+":"
             + pad(d.getMinutes())+":"
             + pad(d.getSeconds())+"  ";
-    },
-    
-    onSelected: function() {
-        //defined by individual interfaces
     }
 }
 
@@ -1233,17 +1216,8 @@ myDesklet.prototype = {
             
             this.interfaces = initializeInterfaces();
             
-            let mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
-            this.setContent(mainBox);
-            this.buttonArea = new St.BoxLayout({ vertical: false, style_class: "devtools-buttonArea" });
-            mainBox.add_actor(this.buttonArea);
-            this.contentArea = new St.BoxLayout({ vertical: true });
-            mainBox.add_actor(this.contentArea);
-            
-            this.addButtons();
-            this.addContent();
+            this.buildLayout();
             this.setHideState();
-            this.selectIndex(0);
             
             this.setHeader(_("Tools"));
             
@@ -1266,8 +1240,8 @@ myDesklet.prototype = {
         });
         xsession_hide_old = this.xsessionHideOld;
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
-        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.reselectCurrent);
-        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.reselectCurrent);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.buildLayout);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.buildLayout);
         this.bindKey();
     },
     
@@ -1320,6 +1294,35 @@ myDesklet.prototype = {
         
         desklet_raised = false;
         this.changingRaiseState = false;
+    },
+    
+    buildLayout: function() {
+        try {
+            
+            if ( this.mainBox ) this.mainBox.destroy();
+            
+            this.mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
+            this.setContent(this.mainBox);
+            
+            //top button area
+            this.buttonArea = new St.BoxLayout({ vertical: false, style_class: "devtools-buttonArea" });
+            this.mainBox.add_actor(this.buttonArea);
+            this.addButtons();
+            
+            //tabs
+            this.contentArea = new St.BoxLayout({ height: this.height, width: this.width, vertical: true });
+            this.mainBox.add(this.contentArea, { expand: true });
+            this.panelBox = new St.BoxLayout({ vertical: true, style_class: "devtools-tabPanels" });
+            this.contentArea.add(this.panelBox, { expand: true });
+            this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
+            this.contentArea.add(this.tabBox);
+            this.tabManager = new Tab.TabManager(this.tabBox, this.panelBox);
+            
+            this.addContent();
+            
+        } catch(e) {
+            global.logError(e);
+        }
     },
     
     addButtons: function() {
@@ -1391,20 +1394,14 @@ myDesklet.prototype = {
     },
     
     addContent: function() {
-        this.interfaceBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: true/*, height: this.height, width: this.width*/ });
-        this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
         for ( let i in this.interfaces ) {
             try {
-                this.interfaceBox.add_actor(this.interfaces[i].panel);
-                let tab = this.interfaces[i].tab;
-                this.tabBox.add_actor(tab);
-                tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
+                this.tabManager.add(this.interfaces[i]);
             } catch(e) {
                 global.logError(e);
             }
         }
-        this.contentArea.add_actor(this.interfaceBox);
-        this.contentArea.add_actor(this.tabBox);
+        this.tabManager.selectIndex(0);
     },
     
     _populateSettingsMenu: function() {
@@ -1442,30 +1439,6 @@ myDesklet.prototype = {
         else {
             Main.createLookingGlass().startInspector();
         }
-    },
-    
-    selectTab: function(tab) {
-        for ( let i in this.interfaces ) {
-            if ( this.interfaces[i].tab == tab ) {
-                this.interfaces[i].setSelect(true, this.height, this.width);
-                this.selected = i;
-            }
-            else this.interfaces[i].setSelect(false);
-        }
-    },
-    
-    selectIndex: function(index) {
-        for ( let i in this.interfaces ) {
-            if ( i == index ) {
-                this.interfaces[i].setSelect(true, this.height, this.width);
-                this.selected = i;
-            }
-            else this.interfaces[i].setSelect(false);
-        }
-    },
-    
-    reselectCurrent: function() {
-        this.selectIndex(this.selected);
     },
     
     setHideState: function(event) {
