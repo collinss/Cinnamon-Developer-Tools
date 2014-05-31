@@ -8,6 +8,7 @@ const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
 const Tooltips = imports.ui.tooltips;
+const Tweener = imports.ui.tweener;
 
 //gobject introspection imports
 const Cinnamon = imports.gi.Cinnamon;
@@ -1532,12 +1533,44 @@ myDesklet.prototype = {
         if ( this.collapsed ) {
             file = Gio.file_new_for_path(button_base_path + "add-symbolic.svg");
             this.collapseTooltip.set_text(_("Expand"));
-            this.contentArea.hide();
+            this.panelBox.hide();
+            this.tabBox.hide();
+            Tweener.addTween(this.contentArea, {
+                time: .25,
+                width: 0,
+                height: 0,
+                onCompleteScope: this,
+                onComplete: function() {
+                    this.contentArea.hide();
+                    this.panelBox.show();
+                    this.tabBox.show();
+                }
+            });
         }
         else {
             file = Gio.file_new_for_path(button_base_path + "remove-symbolic.svg");
             this.collapseTooltip.set_text(_("Collapse"));
+            this.contentArea.height = 0;
+            this.contentArea.width = 0;
+            this.panelBox.hide();
+            this.tabBox.hide();
             this.contentArea.show();
+            Tweener.addTween(this.contentArea, {
+                time: .25,
+                width: this.width,
+                onCompleteScope: this,
+                onComplete: function() {
+                    Tweener.addTween(this.contentArea, {
+                        time: 1,
+                        height: this.height,
+                        onCompleteScope: this,
+                        onComplete: function() {
+                            this.panelBox.show();
+                            this.tabBox.show();
+                        }
+                    });
+                }
+            });
         }
         let gicon = new Gio.FileIcon({ file: file });
         this.collapseIcon.gicon = gicon;

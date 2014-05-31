@@ -46,7 +46,7 @@ TabManager.prototype = {
             this.items[this.selectedIndex].setSelect(false);
         
         this.selectedIndex = index;
-        this.items[index].setSelect(true);
+        if ( this.selectedIndex >= 0 ) this.items[index].setSelect(true);
         
         return true;
     }
