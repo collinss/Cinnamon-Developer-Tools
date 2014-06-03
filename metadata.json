@@ -1,8 +1,12 @@
 {
- "uuid": "devTools@scollins",
- "name": "Developer's Tools",
- "description": "A desklet for applet, desklet, and extension developers",
- "icon": "applications-development",
- "prevent-decorations": false
+    "uuid": "devTools@scollins",
+    "name": "Developer's Tools",
+    "description": "A desklet for troubleshooting and developing in the Cinnamon UI",
+    "comments": "This desklet provides tools to help troubleshoot, view and control certain Cinnamon components and status information, and even test new code without restarting Cinnamon. Feel free to contribute by submitting pull requests, bug reports and feature requests to my github repo.",
+    "website": "https://github.com/collinss/Cinnamon-Developer-Tools",
+    "version": "2.1",
+    "contributors": "Stephen Collins - Author",
+    "icon": "applications-development",
+    "prevent-decorations": false
 }
 
