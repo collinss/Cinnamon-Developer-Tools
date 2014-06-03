@@ -786,8 +786,8 @@ Signals.addSignalMethods(RaisedBox.prototype);
 /************************************************
 /interfaces
 ************************************************/
-function GenericInterface() {
-    this._init();
+function GenericInterface(canClose) {
+    this._init(canClose);
 }
 
 GenericInterface.prototype = {
@@ -795,8 +795,8 @@ GenericInterface.prototype = {
     
     name: _("Untitled"),
     
-    _init: function() {
-        Tab.TabItemBase.prototype._init.call(this);
+    _init: function(canClose) {
+        Tab.TabItemBase.prototype._init.call(this, { canClose: canClose });
         
         this.panel = new St.BoxLayout({ style_class: "devtools-panel", vertical: true });
         this.setContent(this.panel);
@@ -1128,7 +1128,7 @@ SandboxInterface.prototype = {
     name: _("Sandbox"),
     
     _init: function() {
-        GenericInterface.prototype._init.call(this);
+        GenericInterface.prototype._init.call(this, true);
         
         let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
         this.panel.add_actor(tabs);
