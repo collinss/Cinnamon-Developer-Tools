@@ -8,6 +8,7 @@ const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
 const Tooltips = imports.ui.tooltips;
+const Tweener = imports.ui.tweener;
 
 //gobject introspection imports
 const Cinnamon = imports.gi.Cinnamon;
@@ -23,6 +24,9 @@ const Util = imports.misc.util;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Signals = imports.signals;
+
+imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
+const Tab = imports.tab;
 
 //global constants
 const POPUP_MENU_ICON_SIZE = 24;
@@ -56,7 +60,6 @@ function initializeInterfaces() {
         new CinnamonLogInterface(),
         new XSessionLogInterface(),
         new TerminalInterface(),
-        new SandboxInterface(),
         new ExtensionInterface(null, "Applets", Extension.Type.APPLET),
         new ExtensionInterface(null, "Desklets", Extension.Type.DESKLET),
         new ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION),
@@ -783,38 +786,22 @@ Signals.addSignalMethods(RaisedBox.prototype);
 /************************************************
 /interfaces
 ************************************************/
-function GenericInterface() {
-    this._init();
+function GenericInterface(canClose) {
+    this._init(canClose);
 }
 
 GenericInterface.prototype = {
+    __proto__: Tab.TabItemBase.prototype,
+    
     name: _("Untitled"),
     
-    _init: function() {
+    _init: function(canClose) {
+        Tab.TabItemBase.prototype._init.call(this, { canClose: canClose });
         
-        //create panel
         this.panel = new St.BoxLayout({ style_class: "devtools-panel", vertical: true });
-        this.panel.hide();
+        this.setContent(this.panel);
         
-        //generate tab
-        this.tab = new St.Button({ label: this.name, style_class: "devtools-tab" });
-        
-    },
-    
-    setSelect: function(select, height, width) {
-        if ( select ) {
-            this.selected = true;
-            this.panel.height = height;
-            this.panel.width = width;
-            this.onSelected();
-            this.panel.show();
-            this.tab.add_style_pseudo_class("selected");
-        }
-        else {
-            this.panel.hide();
-            this.tab.remove_style_pseudo_class("selected");
-            this.selected = false;
-        }
+        this.setTabContent(new St.Label({ text: this.name }));
     },
     
     _formatTime: function(d) {
@@ -824,10 +811,6 @@ GenericInterface.prototype = {
             + (d.getHours())+":"
             + pad(d.getMinutes())+":"
             + pad(d.getSeconds())+"  ";
-    },
-    
-    onSelected: function() {
-        //defined by individual interfaces
     }
 }
 
@@ -1145,48 +1128,118 @@ SandboxInterface.prototype = {
     name: _("Sandbox"),
     
     _init: function() {
-        GenericInterface.prototype._init.call(this);
+        GenericInterface.prototype._init.call(this, true);
         
-        let entryScrollBox = new St.ScrollView({ height: 120, style_class: "devtools-sandbox-entryScrollBox" });
-        this.panel.add_actor(entryScrollBox);
-        entryScrollBox.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
-        let box = new St.BoxLayout({ vertical: true });
-        entryScrollBox.add_actor(box);
+        let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
+        this.panel.add_actor(tabs);
+        let tabPanels = new St.BoxLayout({ height: 120, style_class: "devtools-sandbox-tabpanels" });
+        this.panel.add_actor(tabPanels);
+        this.tabManager = new Tab.TabManager(tabs, tabPanels);
+        
+        //javascript
+        let jsTab = new Tab.TabItemBase();
+        this.tabManager.add(jsTab);
+        jsTab.setTabContent(new St.Label({ text: "Javascript" }));
+        
+        let javascriptScrollBox = new St.ScrollView({ style_class: "devtools-sandbox-scrollBox" });
+        jsTab.setContent(javascriptScrollBox);
+        javascriptScrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
+        
+        let jsBox = new St.BoxLayout({ vertical: true });
+        javascriptScrollBox.add_actor(jsBox);
         let padding = new St.Bin({ reactive: true });
-        box.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
+        jsBox.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
         
-        this.entryBox = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
-        box.add_actor(this.entryBox);
-        this.entryBox.set_clip_to_allocation(false);
-        this.entryBox.clutter_text.set_single_line_mode(false);
-        this.entryBox.clutter_text.set_activatable(false);
-        this.entryBox.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-        this.entryBox.clutter_text.line_wrap = true;
-        this.entryBox.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
+        this.javascript = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
+        jsBox.add_actor(this.javascript);
+        this.javascript.set_clip_to_allocation(false);
+        this.javascript.clutter_text.set_single_line_mode(false);
+        this.javascript.clutter_text.set_activatable(false);
+        this.javascript.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this.javascript.clutter_text.line_wrap = true;
+        this.javascript.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
         
+        this.javascript.clutter_text.connect("button_press_event", Lang.bind(this, this.enter, this.javascript));
+        javascriptScrollBox.connect("button_press_event", Lang.bind(this, this.enter, this.javascript));
+        
+        //css
+        let cssTab = new Tab.TabItemBase();
+        this.tabManager.add(cssTab);
+        cssTab.setTabContent(new St.Label({ text: "CSS" }));
+        
+        let styleScrollBox = new St.ScrollView({ style_class: "devtools-sandbox-scrollBox" });
+        cssTab.setContent(styleScrollBox);
+        styleScrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
+        
+        let cssBox = new St.BoxLayout({ vertical: true });
+        styleScrollBox.add_actor(cssBox);
+        let padding = new St.Bin({ reactive: true });
+        cssBox.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
+        
+        this.styleSheet = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
+        cssBox.add_actor(this.styleSheet);
+        this.styleSheet.set_clip_to_allocation(false);
+        this.styleSheet.clutter_text.set_single_line_mode(false);
+        this.styleSheet.clutter_text.set_activatable(false);
+        this.styleSheet.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this.styleSheet.clutter_text.line_wrap = true;
+        this.styleSheet.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
+        
+        this.styleSheet.clutter_text.connect("button_press_event", Lang.bind(this, this.enter, this.styleSheet));
+        styleScrollBox.connect("button_press_event", Lang.bind(this, this.enter, this.styleSheet));
+        
+        this.tabManager.selectIndex(0);
+        
+        //button controls
         let buttonBox = new St.BoxLayout({ style_class: "devtools-sandbox-buttonBox" });
         this.panel.add_actor(buttonBox);
         let evaluateButton = new St.Button({ label: "Evaluate", style_class: "devtools-button" });
         buttonBox.add_actor(evaluateButton);
         evaluateButton.connect("clicked", Lang.bind(this, this.evaluate));
         
-        let previewer = new St.Bin({ style_class: "devtools-sandbox-previewer" });
-        this.panel.add(previewer, { expand: true });
-        this.previewObject = new St.BoxLayout();
-        previewer.add_actor(this.previewObject);
-        
-        this.entryBox.clutter_text.connect("button_press_event", Lang.bind(this, this.enter));
-        entryScrollBox.connect("button_press_event", Lang.bind(this, this.enter));
+        //sandbox preview
+        this.previewer = new St.Bin({ style_class: "devtools-sandbox-previewer" });
+        this.panel.add(this.previewer, { expand: true });
     },
     
     evaluate: function() {
-        let style = this.entryBox.text;
+        this.previewer.destroy_all_children();
         
-        this.previewObject.set_style(style);
-        
+        let jsText = this.javascript.text;
+        let actor;
+        try {
+            let sandboxCode = new Function(jsText);
+            actor = sandboxCode();
+            if ( actor && actor instanceof Clutter.Actor ) {
+                this.previewer.add_actor(actor);
+                
+                let cssText = this.styleSheet.text;
+                if ( cssText != "" ) {
+                    try {
+                        let cssTemp = Gio.file_new_for_path(".temp.css");
+                        
+                        let fstream = cssTemp.replace(null, false, Gio.FileCreateFlags.NONE, null);
+                        let dstream = new Gio.DataOutputStream({ base_stream: fstream });
+                        
+                        dstream.put_string(cssText, null);
+                        fstream.close(null);
+                        
+                        let sanboxTheme = new St.Theme();
+                        sanboxTheme.load_stylesheet(cssTemp.get_path());
+                        actor.set_theme(sanboxTheme);
+                        
+                    } catch(e) {
+                        throw e;
+                    }
+                }
+            }
+            else throw String(actor) + " is not an actor";
+        } catch(e) {
+            this.previewer.add_actor(new St.Label({ text: String(e) }));
+        }
     },
     
-    enter: function() {
+    enter: function(a, b, entry) {
         if ( desklet_raised ) {
             object_has_key_focus = true;
         }
@@ -1197,12 +1250,12 @@ SandboxInterface.prototype = {
                 global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
             }
             
-            this.entryBox.grab_key_focus();
+            entry.grab_key_focus();
         }
-        if ( !this.leaveEventId ) this.leaveEventId = this.entryBox.connect("key-focus-out", Lang.bind(this, this.leave));
+        if ( !this.leaveEventId ) this.leaveEventId = entry.connect("key-focus-out", Lang.bind(this, this.leave));
     },
     
-    leave: function() {
+    leave: function(entry) {
         if ( desklet_raised ) {
             object_has_key_focus = false;
         }
@@ -1211,7 +1264,7 @@ SandboxInterface.prototype = {
             this.previousMode = null;
         }
         
-        if ( this.leaveEventId ) this.entryBox.disconnect(this.leaveEventId);
+        if ( this.leaveEventId ) entry.disconnect(this.leaveEventId);
     }
 }
 
@@ -1233,17 +1286,8 @@ myDesklet.prototype = {
             
             this.interfaces = initializeInterfaces();
             
-            let mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
-            this.setContent(mainBox);
-            this.buttonArea = new St.BoxLayout({ vertical: false, style_class: "devtools-buttonArea" });
-            mainBox.add_actor(this.buttonArea);
-            this.contentArea = new St.BoxLayout({ vertical: true });
-            mainBox.add_actor(this.contentArea);
-            
-            this.addButtons();
-            this.addContent();
+            this.buildLayout();
             this.setHideState();
-            this.selectIndex(0);
             
             this.setHeader(_("Tools"));
             
@@ -1266,8 +1310,8 @@ myDesklet.prototype = {
         });
         xsession_hide_old = this.xsessionHideOld;
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
-        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.reselectCurrent);
-        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.reselectCurrent);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.buildLayout);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.buildLayout);
         this.bindKey();
     },
     
@@ -1322,6 +1366,35 @@ myDesklet.prototype = {
         this.changingRaiseState = false;
     },
     
+    buildLayout: function() {
+        try {
+            
+            if ( this.mainBox ) this.mainBox.destroy();
+            
+            this.mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
+            this.setContent(this.mainBox);
+            
+            //top button area
+            this.buttonArea = new St.BoxLayout({ vertical: false, style_class: "devtools-buttonArea" });
+            this.mainBox.add_actor(this.buttonArea);
+            this.addButtons();
+            
+            //tabs
+            this.contentArea = new St.BoxLayout({ height: this.height, width: this.width, vertical: true });
+            this.mainBox.add(this.contentArea, { expand: true });
+            this.panelBox = new St.BoxLayout({ vertical: true, style_class: "devtools-tabPanels" });
+            this.contentArea.add(this.panelBox, { expand: true });
+            this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
+            this.contentArea.add(this.tabBox);
+            this.tabManager = new Tab.TabManager(this.tabBox, this.panelBox);
+            
+            this.addContent();
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
     addButtons: function() {
         //collapse button
         this.collapseButton = new St.Button({ style_class: "devtools-button" });
@@ -1344,6 +1417,16 @@ myDesklet.prototype = {
         this.settingsMenu = new Menu(settingsMenuIcon, _("Cinnamon Settings"), "devtools-button");
         this.buttonArea.add_actor(this.settingsMenu.actor);
         this._populateSettingsMenu();
+        
+        //sandbox button
+        let sandboxButton = new St.Button({ style_class: "devtools-button" });
+        this.buttonArea.add_actor(sandboxButton);
+        let sandIFile = Gio.file_new_for_path(button_base_path + "sandbox-symbolic.svg");
+        let sandIGicon = new Gio.FileIcon({ file: sandIFile });
+        let sandboxIcon = new St.Icon({ gicon: sandIGicon, icon_size: 20, icon_type: St.IconType.SYMBOLIC });
+        sandboxButton.set_child(sandboxIcon);
+        sandboxButton.connect("clicked", Lang.bind(this, this.newSandbox));
+        new Tooltips.Tooltip(sandboxButton, _("Start Sandbox"));
         
         //inspect button
         let inspectButton = new St.Button({ style_class: "devtools-button" });
@@ -1391,20 +1474,14 @@ myDesklet.prototype = {
     },
     
     addContent: function() {
-        this.interfaceBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: true/*, height: this.height, width: this.width*/ });
-        this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
         for ( let i in this.interfaces ) {
             try {
-                this.interfaceBox.add_actor(this.interfaces[i].panel);
-                let tab = this.interfaces[i].tab;
-                this.tabBox.add_actor(tab);
-                tab.connect("clicked", Lang.bind(this, function (){ this.selectTab(tab) }));
+                this.tabManager.add(this.interfaces[i]);
             } catch(e) {
                 global.logError(e);
             }
         }
-        this.contentArea.add_actor(this.interfaceBox);
-        this.contentArea.add_actor(this.tabBox);
+        this.tabManager.selectIndex(0);
     },
     
     _populateSettingsMenu: function() {
@@ -1420,6 +1497,13 @@ myDesklet.prototype = {
                              function() { Util.spawnCommandLine(command); },
                              new St.Icon({ icon_name: "cs-" + SETTINGS_PAGES[i].page, icon_size: POPUP_MENU_ICON_SIZE, icon_type: St.IconType.FULLCOLOR }));
         }
+    },
+    
+    newSandbox: function() {
+        let sandbox = new SandboxInterface();
+        this.interfaces.push(sandbox);
+        this.tabManager.add(sandbox);
+        this.tabManager.selectItem(sandbox);
     },
     
     launchLookingGlass: function() {
@@ -1444,41 +1528,49 @@ myDesklet.prototype = {
         }
     },
     
-    selectTab: function(tab) {
-        for ( let i in this.interfaces ) {
-            if ( this.interfaces[i].tab == tab ) {
-                this.interfaces[i].setSelect(true, this.height, this.width);
-                this.selected = i;
-            }
-            else this.interfaces[i].setSelect(false);
-        }
-    },
-    
-    selectIndex: function(index) {
-        for ( let i in this.interfaces ) {
-            if ( i == index ) {
-                this.interfaces[i].setSelect(true, this.height, this.width);
-                this.selected = i;
-            }
-            else this.interfaces[i].setSelect(false);
-        }
-    },
-    
-    reselectCurrent: function() {
-        this.selectIndex(this.selected);
-    },
-    
     setHideState: function(event) {
         let file;
         if ( this.collapsed ) {
             file = Gio.file_new_for_path(button_base_path + "add-symbolic.svg");
             this.collapseTooltip.set_text(_("Expand"));
-            this.contentArea.hide();
+            this.panelBox.hide();
+            this.tabBox.hide();
+            Tweener.addTween(this.contentArea, {
+                time: .25,
+                width: 0,
+                height: 0,
+                onCompleteScope: this,
+                onComplete: function() {
+                    this.contentArea.hide();
+                    this.panelBox.show();
+                    this.tabBox.show();
+                }
+            });
         }
         else {
             file = Gio.file_new_for_path(button_base_path + "remove-symbolic.svg");
             this.collapseTooltip.set_text(_("Collapse"));
+            this.contentArea.height = 0;
+            this.contentArea.width = 0;
+            this.panelBox.hide();
+            this.tabBox.hide();
             this.contentArea.show();
+            Tweener.addTween(this.contentArea, {
+                time: .25,
+                width: this.width,
+                onCompleteScope: this,
+                onComplete: function() {
+                    Tweener.addTween(this.contentArea, {
+                        time: 1,
+                        height: this.height,
+                        onCompleteScope: this,
+                        onComplete: function() {
+                            this.panelBox.show();
+                            this.tabBox.show();
+                        }
+                    });
+                }
+            });
         }
         let gicon = new Gio.FileIcon({ file: file });
         this.collapseIcon.gicon = gicon;

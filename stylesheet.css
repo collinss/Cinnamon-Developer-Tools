@@ -14,6 +14,10 @@
     font-weight: bolder;
 }
 
+.devtools-tabPanels {
+    
+}
+
 .devtools-tabBox {
     padding: 3px;
     spacing: 10px;
@@ -84,7 +88,7 @@
     /*height: 0px;*/
 }
 
-.devtools-sandbox-entryScrollBox {
+.devtools-sandbox-scrollBox {
     background-color: #ffffff;
     height: 10em;
 }
@@ -94,10 +98,14 @@
 }
 
 .devtools-sandbox-buttonBox {
-    spacing: 5px;
+    spacing: 10px;
 }
 
 .devtools-sandbox-previewer {
     padding: 10px;
     border: solid 1px gold;
+}
+
+.devtools-sandbox-tabs {
+    spacing: 10px;
 }
