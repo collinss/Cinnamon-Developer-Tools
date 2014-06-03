@@ -1,26 +1,20 @@
 To-Do
 -----
+    implement tab scrolling
+    add about dialog
+    pollish sandbox
+    update theme
+    switch to pushmodal for raised mode
 
 Done
 ----
-    Implement 'Terminal' interface
-    Implemented inspector
-    Updated settings icon
-    Added xsession-errors interface
-    Fork remaining icons
-    Fix bug in terminal that locks system on reading output pipe
-    Implement handling of processes in terminal
-    Implement raise to top
-    Open windows interface
-    Reload theme button
-    Fix x-let reload code function
-    Fix bug with entry in raised mode
-    x-session 
-    Double-check theme asthetics
+    Sandbox interface
+    switch tab interface
+    added some animations
+    Allow for closeable tabs
 
 Wish-list
 ---------
     Input handling in terminal
     Memory interface
-    Sandbox interface
     Add Tweeners
