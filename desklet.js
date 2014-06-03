@@ -1287,7 +1287,6 @@ myDesklet.prototype = {
             this.interfaces = initializeInterfaces();
             
             this.buildLayout();
-            this.setHideState();
             
             this.setHeader(_("Tools"));
             
@@ -1382,6 +1381,7 @@ myDesklet.prototype = {
             //tabs
             this.contentArea = new St.BoxLayout({ height: this.height, width: this.width, vertical: true });
             this.mainBox.add(this.contentArea, { expand: true });
+            if ( this.collapsed ) this.contentArea.hide();
             this.panelBox = new St.BoxLayout({ vertical: true, style_class: "devtools-tabPanels" });
             this.contentArea.add(this.panelBox, { expand: true });
             this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
@@ -1399,10 +1399,21 @@ myDesklet.prototype = {
         //collapse button
         this.collapseButton = new St.Button({ style_class: "devtools-button" });
         this.buttonArea.add_actor(this.collapseButton);
-        this.collapseIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
+        let file, text;
+        if ( this.collapsed ) {
+            file = Gio.file_new_for_path(button_base_path + "add-symbolic.svg");
+            text = _("Expand");
+        }
+        else {
+            file = Gio.file_new_for_path(button_base_path + "remove-symbolic.svg");
+            text = _("Collapse");
+        }
+        let gicon = new Gio.FileIcon({ file: file });
+        
+        this.collapseIcon = new St.Icon({ gicon: gicon, icon_type: St.IconType.SYMBOLIC, icon_size: "20" });
         this.collapseButton.set_child(this.collapseIcon);
         this.collapseButton.connect("clicked", Lang.bind(this, this.toggleCollapse));
-        this.collapseTooltip = new Tooltips.Tooltip(this.collapseButton);
+        this.collapseTooltip = new Tooltips.Tooltip(this.collapseButton, text);
         
         if ( this.collapsedStartState == 1 ) this.collapsed = false;
         else if ( this.collapsedStartState == 2 ) this.collapsed = true;
