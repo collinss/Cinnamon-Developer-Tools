@@ -53,7 +53,6 @@ let button_base_path;
 let command_output_start_state;
 let xsession_hide_old;
 let desklet_raised = false;
-let object_has_key_focus = false;
 
 
 function initializeInterfaces() {
@@ -742,31 +741,11 @@ Terminal.prototype = {
     },
     
     enter: function() {
-        if ( desklet_raised ) {
-            object_has_key_focus = true;
-        }
-        else {
-            let currentMode = global.stage_input_mode;
-            if ( currentMode != Cinnamon.StageInputMode.FOCUSED ) {
-                this.previousMode = currentMode;
-                global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
-            }
-            
+        if ( !desklet_raised ) {
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
             this.input.grab_key_focus();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
         }
-        if ( !this.leaveEventId ) this.leaveEventId = this.input.connect("key-focus-out", Lang.bind(this, this.leave));
-    },
-    
-    leave: function() {
-        if ( desklet_raised ) {
-            object_has_key_focus = false;
-        }
-        else {
-            if ( this.previousMode ) global.set_stage_input_mode(this.previousMode);
-            this.previousMode = null;
-        }
-        
-        if ( this.leaveEventId ) this.input.disconnect(this.leaveEventId);
     }
 }
 
@@ -812,7 +791,7 @@ RaisedBox.prototype = {
         }
     },
     
-    add: function(desklet) {
+    add: function(desklet, center) {
         try {
             
             this.desklet = desklet;
@@ -821,34 +800,28 @@ RaisedBox.prototype = {
             
             this.groupContent.add_actor(this.desklet.actor);
             
+            if ( !center ) {
+                let allocation = Cinnamon.util_get_transformed_allocation(desklet.actor);
+                let monitor = Main.layoutManager.findMonitorForActor(desklet.actor);
+                let x = Math.floor((monitor.width - allocation.x1 - allocation.x2) / 2);
+                let y = Math.floor((monitor.height - allocation.y1 - allocation.y2) / 2);
+                
+                this.actor.set_anchor_point(x,y);
+            }
+            
+            Main.pushModal(this.actor);
             this.actor.show();
-            //we set the input mode to focused first to grab keyboard events
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
-            global.stage.set_key_focus(this.actor);
-            this.actor.grab_key_focus();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-            global.focus_manager.add_group(this.actor);
             
             //we must capture all events to avoid undesired effects
             this.stageEventIds.push(global.stage.connect("captured-event", Lang.bind(this, this.onStageEvent)));
             this.stageEventIds.push(global.stage.connect("enter-event", Lang.bind(this, this.onStageEvent)));
             this.stageEventIds.push(global.stage.connect("leave-event", Lang.bind(this, this.onStageEvent)));
-            this.settingsMenuEvents.push(this.settingsMenu.connect("activate", Lang.bind(this, function() {
+            this.settingsMenuActivateId = this.settingsMenu.connect("activate", Lang.bind(this, function() {
                 this.emit("closed");
-            })));
-            this.settingsMenuEvents.push(this.settingsMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
-                if ( !open ) {
-                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-                }
-            })));
-            this.contextMenuEvents.push(this.contextMenu.connect("activate", Lang.bind(this, function() {
+            }));
+            this.contextMenuActivateId = this.contextMenu.connect("activate", Lang.bind(this, function() {
                 this.emit("closed");
-            })));
-            this.contextMenuEvents.push(this.contextMenu.connect("open-state-changed", Lang.bind(this, function(menu, open) {
-                if ( !open ) {
-                    global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
-                }
-            })));
+            }));
             
         } catch(e) {
             global.logError(e);
@@ -859,14 +832,12 @@ RaisedBox.prototype = {
         try {
             
             for ( let i = 0; i < this.stageEventIds.length; i++ ) global.stage.disconnect(this.stageEventIds[i]);
-            for ( let i = 0; i < this.settingsMenuEvents.length; i++ ) this.settingsMenu.disconnect(this.settingsMenuEvents[i]);
-            for ( let i = 0; i < this.contextMenuEvents.length; i++ ) this.contextMenu.disconnect(this.contextMenuEvents[i]);
-            object_has_key_focus = false; //if any object had focus, we don't want it to now
+            this.settingsMenu.disconnect(this.settingsMenuActivateId);
+            this.contextMenu.disconnect(this.contextMenuActivateId);
             
+            Main.popModal(this.actor);
             if ( this.desklet ) this.groupContent.remove_actor(this.desklet.actor);
-            
             this.actor.destroy();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
             
         } catch(e) {
             global.logError(e);
@@ -879,13 +850,13 @@ RaisedBox.prototype = {
             let type = event.type();
             let target = event.get_source();
             
-            if ( type == Clutter.EventType.KEY_RELEASE ) return true;
             if ( type == Clutter.EventType.KEY_PRESS ) {
                 //escape lowers the desklet
-                if ( event.get_key_symbol() == Clutter.KEY_Escape ) this.emit("closed");
-                //only send keyboard events when the desired actor is focused
-                else if ( object_has_key_focus ) return false;
-                else return true;
+                if ( event.get_key_symbol() == Clutter.KEY_Escape ) {
+                    this.emit("closed");
+                    return true;
+                }
+                return false;
             }
             
             //we don't want to block events that belong to the desklet
@@ -900,7 +871,7 @@ RaisedBox.prototype = {
             global.logError(e);
         }
         
-        return true;
+        return false;
     }
 }
 Signals.addSignalMethods(RaisedBox.prototype);
@@ -1362,32 +1333,15 @@ SandboxInterface.prototype = {
         }
     },
     
-    enter: function(a, b, entry) {
+    enter: function(actor, event, entry) {
         if ( desklet_raised ) {
-            object_has_key_focus = true;
+            if ( actor != entry ) entry.grab_key_focus();
         }
         else {
-            let currentMode = global.stage_input_mode;
-            if ( currentMode != Cinnamon.StageInputMode.FOCUSED ) {
-                this.previousMode = currentMode;
-                global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
-            }
-            
+            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
             entry.grab_key_focus();
+            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
         }
-        if ( !this.leaveEventId ) this.leaveEventId = entry.connect("key-focus-out", Lang.bind(this, this.leave));
-    },
-    
-    leave: function(entry) {
-        if ( desklet_raised ) {
-            object_has_key_focus = false;
-        }
-        else {
-            if ( this.previousMode ) global.set_stage_input_mode(this.previousMode);
-            this.previousMode = null;
-        }
-        
-        if ( this.leaveEventId ) entry.disconnect(this.leaveEventId);
     }
 }
 
@@ -1437,6 +1391,7 @@ myDesklet.prototype = {
         });
         xsession_hide_old = this.xsessionHideOld;
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "centerRaised", "centerRaised");
         this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.buildLayout);
         this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.buildLayout);
         this.bindKey();
@@ -1470,7 +1425,7 @@ myDesklet.prototype = {
         
         let position = this.actor.get_position();
         this.actor.get_parent().remove_actor(this.actor);
-        this.raisedBox.add(this);
+        this.raisedBox.add(this, this.centerRaised);
         
         this.raisedBox.connect("closed", Lang.bind(this, this.lower));
         

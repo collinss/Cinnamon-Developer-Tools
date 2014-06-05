@@ -19,7 +19,7 @@
     "lgOpen": {
         "type": "checkbox",
         "default": false,
-        "description": "Open stand-alone Looking Glass (Melange)"
+        "description": "Use stand-alone Looking Glass (Melange) instead of the buildt-in Cinnamon one"
     },
     
     "terminalOutputShow": {
@@ -40,6 +40,12 @@
         "type": "keybinding",
         "description": "Raise to top shorcut key",
         "default": "<Super>v"
+    },
+    
+    "centerRaised": {
+        "type": "checkbox",
+        "description": "Center the desklet on the screen in raised mode",
+        "default": false
     },
     
     "height": {
