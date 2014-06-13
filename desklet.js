@@ -1053,7 +1053,7 @@ CinnamonLogInterface.prototype = {
         let text = "";
         for ( let i = 0; i < stack.length; i++) {
             let logItem = stack[i];
-            text += this._formatTime(new Date(parseInt(logItem.timestamp))) + logItem.category + ":  " + logItem.message + "\n";
+            text += logItem.category + ":  " + this._formatTime(new Date(parseInt(logItem.timestamp))) + logItem.message + "\n";
         }
         
         //set scroll position to the end (new content shown)
