@@ -1019,6 +1019,12 @@ CinnamonLogInterface.prototype = {
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
         
+        let bottomBox = new St.BoxLayout();
+        this.panel.add_actor(bottomBox);
+        let copyButton = new St.Button({ label: "copy" });
+        bottomBox.add_actor(copyButton);
+        copyButton.connect("clicked", Lang.bind(this, this.copy));
+        
     },
     
     connectToLgDBus: function() {
@@ -1063,6 +1069,10 @@ CinnamonLogInterface.prototype = {
     onSelected: function() {
         Mainloop.idle_add(Lang.bind(this, this.getText));
         this.connectToLgDBus();
+    },
+    
+    copy: function() {
+        St.Clipboard.get_default().set_text(this.contentText.text);
     }
 }
 

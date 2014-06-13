@@ -3,7 +3,6 @@ To-Do
     implement tab scrolling
     pollish sandbox
     update theme
-    switch to pushmodal for raised mode
 
 Done
 ----
@@ -12,6 +11,8 @@ Done
     added some animations
     Allow for closeable tabs
     add about dialog
+    switch to pushmodal for raised mode
+    add copy button to cinnamon log
 
 Wish-list
 ---------
