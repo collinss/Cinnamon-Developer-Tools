@@ -1,5 +1,6 @@
 //javascript ui imports
 const AppletManager = imports.ui.appletManager;
+const CheckBox = imports.ui.checkBox;
 const Desklet = imports.ui.desklet;
 const DeskletManager = imports.ui.deskletManager;
 const Extension = imports.ui.extension;
@@ -1019,9 +1020,17 @@ CinnamonLogInterface.prototype = {
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
         
-        let bottomBox = new St.BoxLayout();
+        let bottomBox = new St.BoxLayout({ style_class: "devtools-cLog-bottomBox" });
         this.panel.add_actor(bottomBox);
-        let copyButton = new St.Button({ label: "copy" });
+        this.showTimestamp = new CheckBox.CheckBox("Show Timestamp", { style_class: "check-box devtools-cLog-checkBox" });
+        bottomBox.add_actor(this.showTimestamp.actor);
+        this.showTimestamp.actor.connect("clicked", Lang.bind(this, this.getText));
+        let copyButton = new St.Button();
+        copyBox = new St.BoxLayout();
+        copyButton.add_actor(copyBox);
+        copyBox.add_actor(new St.Icon({ icon_name: "edit-copy", icon_size: 16, icon_type: St.IconType.SYMBOLIC }));
+        copyBox.add_actor(new St.Label({ text: "Copy" }));
+        bottomBox.add(new St.BoxLayout(), { expand: true });
         bottomBox.add_actor(copyButton);
         copyButton.connect("clicked", Lang.bind(this, this.copy));
         
@@ -1053,7 +1062,9 @@ CinnamonLogInterface.prototype = {
         let text = "";
         for ( let i = 0; i < stack.length; i++) {
             let logItem = stack[i];
-            text += logItem.category + ":  " + this._formatTime(new Date(parseInt(logItem.timestamp))) + logItem.message + "\n";
+            text += logItem.category + ":  ";
+            if ( this.showTimestamp.actor.checked ) text += this._formatTime(new Date(parseInt(logItem.timestamp)));
+            text += logItem.message + "\n";
         }
         
         //set scroll position to the end (new content shown)

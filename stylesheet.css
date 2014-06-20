@@ -27,12 +27,6 @@
     padding: 3px;
 }
 
-/*.devtools-refreshBox {
-    padding: 3px;
-    spacin: 2px;
-}
-*/
-
 /*terminal*/
 .devtools-terminal-entry {
     background-color: #ffffff;
@@ -108,4 +102,12 @@
 
 .devtools-sandbox-tabs {
     spacing: 10px;
+}
+
+.devtools-cLog-bottomBox {
+    
+}
+
+.devtools-cLog-checkBox StLabel {
+    
 }
