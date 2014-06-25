@@ -3,6 +3,7 @@ To-Do
     implement tab scrolling
     pollish sandbox
     update theme
+    fix button menu sizing
 
 Done
 ----
@@ -13,6 +14,7 @@ Done
     add about dialog
     switch to pushmodal for raised mode
     add copy button to cinnamon log
+    distribute interfaces to separate files
 
 Wish-list
 ---------
