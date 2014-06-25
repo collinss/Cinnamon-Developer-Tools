@@ -190,6 +190,65 @@ AboutDialog.prototype = {
 }
 
 
+function FileEntryDialog(callback) {
+    this._init(callback);
+}
+
+FileEntryDialog.prototype = {
+    __proto__: ModalDialog.ModalDialog.prototype,
+    
+    _init: function(callback) {
+        try {
+            
+            this.callback = callback;
+            ModalDialog.ModalDialog.prototype._init.call(this, {  });
+            
+            let contentBox = new St.BoxLayout({ vertical: true, style_class: "devtools-fileDialog-contentBox" });
+            this.contentLayout.add_actor(contentBox);
+            
+            this.fileEntry = new St.Entry({ style_class: "devtools-fileDialog-entry", text: "~/Desktop/checkBox.js" });
+            contentBox.add_actor(this.fileEntry);
+            this.fileEntry.connect("key_press_event", Lang.bind(this, this.conKeyPressed));
+            
+            //dialog close button
+            this.setButtons([
+                { label: "Cancel", key: "", focus: true, action: Lang.bind(this, this.onCancel) },
+                { label: "Open", key: "", focus: true, action: Lang.bind(this, this.onOk) }
+            ]);
+            
+            this.open(global.get_current_time());
+            
+        } catch(e) {
+            global.logError(e);
+        }
+    },
+    
+    onOk: function() {
+        let fileName = this.fileEntry.text;
+        fileName = fileName.replace("~", GLib.get_home_dir())
+        let file = Gio.file_new_for_path(fileName);
+        if ( !file.query_exists(null) ) return;
+        
+        this.close(global.get_current_time());
+        this.callback(file);
+    },
+    
+    onCancel: function() {
+        this.close(global.get_current_time());
+    },
+    
+    conKeyPressed: function(object, event) {
+        let symbol = event.get_key_symbol();
+        if ( symbol == Clutter.Return || symbol == Clutter.KP_Enter ) {
+            this.onOk();
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+
 /************************************************
 /widgets
 ************************************************/
@@ -1251,22 +1310,32 @@ SandboxInterface.prototype = {
         this.panel.add_actor(tabPanels);
         this.tabManager = new Tab.TabManager(tabs, tabPanels);
         
-        //javascript
+        /*javascript*/
         let jsTab = new Tab.TabItemBase();
         this.tabManager.add(jsTab);
         jsTab.setTabContent(new St.Label({ text: "Javascript" }));
+        let jsBox = new St.BoxLayout({ style_class: "devtools-sandbox-box" });
+        jsTab.setContent(jsBox);
+        
+        let jsTabButtonBox = new St.BoxLayout({ vertical: true });
+        jsBox.add_actor(jsTabButtonBox);
+        let jsOpenFileButton = new St.Button();
+        jsTabButtonBox.add_actor(jsOpenFileButton);
+        jsOpenFileButton.add_actor(new St.Icon({ icon_name: "fileopen", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
+        jsOpenFileButton.connect("clicked", Lang.bind(this, this.openFileDialog));
         
         let javascriptScrollBox = new St.ScrollView({ style_class: "devtools-sandbox-scrollBox" });
-        jsTab.setContent(javascriptScrollBox);
+        jsBox.add(javascriptScrollBox, { expand: true });
         javascriptScrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
         
-        let jsBox = new St.BoxLayout({ vertical: true });
-        javascriptScrollBox.add_actor(jsBox);
+        let jsTextBox = new St.BoxLayout({ vertical: true });
+        javascriptScrollBox.add_actor(jsTextBox);
         let padding = new St.Bin({ reactive: true });
-        jsBox.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
+        jsTextBox.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
         
         this.javascript = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
-        jsBox.add_actor(this.javascript);
+        jsTextBox.add_actor(this.javascript);
+        jsTab.textBox = this.javascript;
         this.javascript.set_clip_to_allocation(false);
         this.javascript.clutter_text.set_single_line_mode(false);
         this.javascript.clutter_text.set_activatable(false);
@@ -1281,18 +1350,28 @@ SandboxInterface.prototype = {
         let cssTab = new Tab.TabItemBase();
         this.tabManager.add(cssTab);
         cssTab.setTabContent(new St.Label({ text: "CSS" }));
+        let cssBox = new St.BoxLayout({ style_class: "devtools-sandbox-box" });
+        cssTab.setContent(cssBox);
+        
+        let cssTabButtonBox = new St.BoxLayout({ vertical: true });
+        cssBox.add_actor(cssTabButtonBox);
+        let cssOpenFileButton = new St.Button();
+        cssTabButtonBox.add_actor(cssOpenFileButton);
+        cssOpenFileButton.add_actor(new St.Icon({ icon_name: "fileopen", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
+        cssOpenFileButton.connect("clicked", Lang.bind(this, this.openFileDialog));
         
         let styleScrollBox = new St.ScrollView({ style_class: "devtools-sandbox-scrollBox" });
-        cssTab.setContent(styleScrollBox);
+        cssBox.add(styleScrollBox, { expand: true });
         styleScrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
         
-        let cssBox = new St.BoxLayout({ vertical: true });
-        styleScrollBox.add_actor(cssBox);
+        let cssTextBox = new St.BoxLayout({ vertical: true });
+        styleScrollBox.add_actor(cssTextBox);
         let padding = new St.Bin({ reactive: true });
-        cssBox.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
+        cssTextBox.add(padding, { y_expand: true, y_fill: true, x_expand: true, x_fill: true });
         
         this.styleSheet = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
-        cssBox.add_actor(this.styleSheet);
+        cssTextBox.add_actor(this.styleSheet);
+        cssTab.textBox = this.styleSheet;
         this.styleSheet.set_clip_to_allocation(false);
         this.styleSheet.clutter_text.set_single_line_mode(false);
         this.styleSheet.clutter_text.set_activatable(false);
@@ -1363,6 +1442,15 @@ SandboxInterface.prototype = {
             entry.grab_key_focus();
             global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
         }
+    },
+    
+    openFileDialog: function() {
+        let dialog = new FileEntryDialog(Lang.bind(this, this.loadFromFile));
+    },
+    
+    loadFromFile: function(file) {
+        let [a, contents, b] = file.load_contents(null);
+        this.tabManager.getSelectedItem().textBox.text = String(contents);
     }
 }
 

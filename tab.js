@@ -39,6 +39,14 @@ TabManager.prototype = {
         return -1;
     },
     
+    getSelectedItem: function() {
+        return this.getItemForIndex(this.selectedIndex);
+    },
+    
+    getSelectedIndex: function() {
+        return this.selectedIndex;
+    },
+    
     selectItem: function(item) {
         this.selectIndex(this.getIndexForItem(item));
     },
