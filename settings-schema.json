@@ -22,20 +22,6 @@
         "description": "Use stand-alone Looking Glass (Melange) instead of the buildt-in Cinnamon one"
     },
     
-    "terminalOutputShow": {
-        "type": "checkbox",
-        "description": "Show process output on run",
-        "default": true,
-        "tooltip": "Uncheck to have it hidden initially"
-    },
-    
-    "xsessionHideOld": {
-        "type": "checkbox",
-        "description": "Hide old xsession errors",
-        "default": true,
-        "tooltip": "Setting this will only display entries posted since cinnamon was started (or restarted)"
-    },
-    
     "raiseKey": {
         "type": "keybinding",
         "description": "Raise to top shorcut key",
@@ -64,5 +50,35 @@
         "max": 1000,
         "step": 50,
         "default": 700
+    },
+    
+    "xsessionHideOld": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "clTimestamp": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "clShowErrors": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "clShowInfos": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "clShowWarnings": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "clShowTraces": {
+        "type": "generic",
+        "default": true
     }
 }

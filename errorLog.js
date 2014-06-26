@@ -17,8 +17,8 @@ const XSESSION_LOG_REFRESH_TIMEOUT = 10;
 let xsession_hide_old = true;
 
 
-function XSessionLogInterface(parent) {
-    this._init(parent);
+function XSessionLogInterface(settings) {
+    this._init(settings);
 }
 
 XSessionLogInterface.prototype = {
@@ -26,10 +26,11 @@ XSessionLogInterface.prototype = {
     
     name: _("X-Session Log"),
     
-    _init: function(parent) {
+    _init: function(settings) {
         
         Interfaces.GenericInterface.prototype._init.call(this);
         
+        this.settings = settings;
         this.start = 0;
         
         this.scrollBox = new St.ScrollView();
@@ -47,9 +48,22 @@ XSessionLogInterface.prototype = {
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
         
+        let bottomBox = new St.BoxLayout({ style_class: "devtools-log-bottomBox" });
+        this.panel.add_actor(bottomBox);
+        
+        this.hideOld = new CheckBox.CheckBox("Hide old errors", { style_class: "check-box devtools-checkBox" });
+        bottomBox.add_actor(this.hideOld.actor);
+        this.hideOld.actor.checked = this.settings.getValue("xsessionHideOld");
+        this.hideOld.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("xsessionHideOld", this.hideOld.actor.checked);
+            this.getText();
+        }));
+        
+        bottomBox.add(new St.BoxLayout(), { expand: true });
+        
         //clear button
         let clearButton = new St.Button({ style_class: "devtools-contentButton" });
-        this.panel.add_actor(clearButton);
+        bottomBox.add_actor(clearButton);
         let clearBox = new St.BoxLayout();
         clearButton.add_actor(clearBox);
         clearBox.add_actor(new St.Label({ text: _("Clear") }));
@@ -68,7 +82,7 @@ XSessionLogInterface.prototype = {
                 this.end = lines.length - 1;
                 for ( let i = this.start; i < lines.length; i++ ) {
                     let line = lines[i];
-                    if ( xsession_hide_old && line.search("About to start Cinnamon") > -1 ) {
+                    if ( this.hideOld.actor.checked && line.search("About to start Cinnamon") > -1 ) {
                         text = ""
                     }
                     text += line + "\n";
@@ -98,8 +112,8 @@ XSessionLogInterface.prototype = {
 }
 
 
-function CinnamonLogInterface(parent) {
-    this._init(parent);
+function CinnamonLogInterface(settings) {
+    this._init(settings);
 }
 
 CinnamonLogInterface.prototype = {
@@ -107,9 +121,11 @@ CinnamonLogInterface.prototype = {
     
     name: _("Cinnamon Log"),
     
-    _init: function(parent) {
+    _init: function(settings) {
         
         Interfaces.GenericInterface.prototype._init.call(this);
+        
+        this.settings = settings;
         
         this.scrollBox = new St.ScrollView();
         
@@ -126,17 +142,56 @@ CinnamonLogInterface.prototype = {
         let paddingBox = new St.Bin();
         this.panel.add(paddingBox, { expand: true });
         
-        let bottomBox = new St.BoxLayout({ style_class: "devtools-cLog-bottomBox" });
+        let bottomBox = new St.BoxLayout({ style_class: "devtools-log-bottomBox" });
         this.panel.add_actor(bottomBox);
-        this.showTimestamp = new CheckBox.CheckBox("Show Timestamp", { style_class: "check-box devtools-cLog-checkBox" });
+        
+        this.showTimestamp = new CheckBox.CheckBox("Show Timestamp", { style_class: "check-box devtools-checkBox" });
         bottomBox.add_actor(this.showTimestamp.actor);
-        this.showTimestamp.actor.connect("clicked", Lang.bind(this, this.getText));
+        this.showTimestamp.actor.checked = this.settings.getValue("clTimestamp");
+        this.showTimestamp.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("clTimestamp", this.showTimestamp.actor.checked);
+            this.getText();
+        }));
+        
+        this.errors = new CheckBox.CheckBox("Errors", { style_class: "check-box devtools-checkBox" });
+        bottomBox.add_actor(this.errors.actor);
+        this.errors.actor.checked = this.settings.getValue("clShowErrors");
+        this.errors.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("clShowErrors", this.errors.actor.checked);
+            this.getText();
+        }))
+        
+        this.infos = new CheckBox.CheckBox("Infos", { style_class: "check-box devtools-checkBox" });
+        bottomBox.add_actor(this.infos.actor);
+        this.infos.actor.checked = this.settings.getValue("clShowInfos");
+        this.infos.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("clShowInfos", this.infos.actor.checked);
+            this.getText();
+        }))
+        
+        this.warnings = new CheckBox.CheckBox("Warnings", { style_class: "check-box devtools-checkBox" });
+        bottomBox.add_actor(this.warnings.actor);
+        this.warnings.actor.checked = this.settings.getValue("clShowWarnings");
+        this.warnings.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("clShowWarnings", this.warnings.actor.checked);
+            this.getText();
+        }))
+        
+        this.traces = new CheckBox.CheckBox("Traces", { style_class: "check-box devtools-checkBox" });
+        bottomBox.add_actor(this.traces.actor);
+        this.traces.actor.checked = this.settings.getValue("clShowTraces");
+        this.traces.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("clShowTraces", this.traces.actor.checked);
+            this.getText();
+        }))
+        
+        bottomBox.add(new St.BoxLayout(), { expand: true });
+        
         let copyButton = new St.Button();
         copyBox = new St.BoxLayout();
         copyButton.add_actor(copyBox);
         copyBox.add_actor(new St.Icon({ icon_name: "edit-copy", icon_size: 16, icon_type: St.IconType.SYMBOLIC }));
         copyBox.add_actor(new St.Label({ text: "Copy" }));
-        bottomBox.add(new St.BoxLayout(), { expand: true });
         bottomBox.add_actor(copyButton);
         copyButton.connect("clicked", Lang.bind(this, this.copy));
         
@@ -160,7 +215,8 @@ CinnamonLogInterface.prototype = {
     },
     
     getText: function() {
-        //if the tab is not shown don't waste resources on refreshing content
+        try {
+            //if the tab is not shown don't waste resources on refreshing content
         if ( !this.selected ) return;
         
         let stack = Main._errorLogStack;
@@ -168,6 +224,20 @@ CinnamonLogInterface.prototype = {
         let text = "";
         for ( let i = 0; i < stack.length; i++) {
             let logItem = stack[i];
+            switch ( logItem.category ) {
+                case "error":
+                    if ( !this.errors.actor.checked ) continue;
+                    break;
+                case "info":
+                    if ( !this.infos.actor.checked ) continue;
+                    break;
+                case "warning":
+                    if ( !this.warnings.actor.checked ) continue;
+                    break;
+                case "trace":
+                    if ( !this.traces.actor.checked ) continue;
+                    break;
+            }
             text += logItem.category + ":  ";
             if ( this.showTimestamp.actor.checked ) text += this._formatTime(new Date(parseInt(logItem.timestamp)));
             text += logItem.message + "\n";
@@ -181,6 +251,9 @@ CinnamonLogInterface.prototype = {
         }
         
         Mainloop.timeout_add_seconds(CINNAMON_LOG_REFRESH_TIMEOUT, Lang.bind(this, this.getText));
+        } catch(e) {
+            global.logError(e);
+        }
     },
     
     onSelected: function() {

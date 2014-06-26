@@ -92,7 +92,7 @@ ExtensionItem.prototype = {
                     icon = new St.Icon({ gicon: gicon, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
                 }
                 else {
-                    icon = new St.Icon({ icon_name: "applets", icon_size: 48, icon_type: St.IconType.FULLCOLOR });
+                    icon = new St.Icon({ icon_name: "cs-"+type.folder, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
                 }
             }
             this.actor.add_actor(icon);

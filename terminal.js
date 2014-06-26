@@ -1,3 +1,4 @@
+const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
@@ -11,9 +12,6 @@ const Mainloop = imports.mainloop;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
 const Interfaces = imports.interfaces;
-
-
-let command_output_start_state = true;
 
 
 function CollapseButton(label, startState, child) {
@@ -119,8 +117,8 @@ CommandItem.prototype = {
         //output toggle
         let toggleBox = new St.BoxLayout();
         this.actor.add_actor(toggleBox);
-        this.showOutput = command_output_start_state;
-        let outputButton = new CollapseButton("Output", command_output_start_state);
+        this.showOutput = true;
+        let outputButton = new CollapseButton("Output", true);
         toggleBox.add_actor(outputButton.actor);
         
         //output
@@ -197,9 +195,18 @@ Terminal.prototype = {
             input = input.replace("~/", GLib.get_home_dir() + "/"); //replace all ~/ with path to home directory
             
             let [success, argv] = GLib.shell_parse_argv(input);
+            if ( !success ) {
+                Main.notify("Unable to parse \"" + input + "\"");
+                return;
+            }
             
-            let flags = GLib.SpawnFlags.SEARCH_PATH;
-            let [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
+            try {
+                let flags = GLib.SpawnFlags.SEARCH_PATH;
+                let [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
+            } catch(e) {
+                Main.notify("Error while trying to run \"" + input + "\"", e.message);
+                return;
+            }
             
             if ( this.output.get_children().length > 0 ) {
                 let separator = new PopupMenu.PopupSeparatorMenuItem();
@@ -228,11 +235,10 @@ Terminal.prototype = {
     },
     
     enter: function() {
-        //if ( !desklet_raised ) {
-            global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
-            this.input.grab_key_focus();
-            global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
-        //}
+        if ( global.stage_input_mode == Cinnamon.StageInputMode.FULLSCREEN ) return;
+        global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+        this.input.grab_key_focus();
+        global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
     }
 }
 
