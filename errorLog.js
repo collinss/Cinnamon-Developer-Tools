@@ -153,14 +153,6 @@ CinnamonLogInterface.prototype = {
             this.getText();
         }));
         
-        this.errors = new CheckBox.CheckBox("Errors", { style_class: "check-box devtools-checkBox" });
-        bottomBox.add_actor(this.errors.actor);
-        this.errors.actor.checked = this.settings.getValue("clShowErrors");
-        this.errors.actor.connect("clicked", Lang.bind(this, function() {
-            this.settings.setValue("clShowErrors", this.errors.actor.checked);
-            this.getText();
-        }))
-        
         this.infos = new CheckBox.CheckBox("Infos", { style_class: "check-box devtools-checkBox" });
         bottomBox.add_actor(this.infos.actor);
         this.infos.actor.checked = this.settings.getValue("clShowInfos");
@@ -177,6 +169,14 @@ CinnamonLogInterface.prototype = {
             this.getText();
         }))
         
+        this.errors = new CheckBox.CheckBox("Errors", { style_class: "check-box devtools-checkBox" });
+        bottomBox.add_actor(this.errors.actor);
+        this.errors.actor.checked = this.settings.getValue("clShowErrors");
+        this.errors.actor.connect("clicked", Lang.bind(this, function() {
+            this.settings.setValue("clShowErrors", this.errors.actor.checked);
+            this.getText();
+        }))
+        
         this.traces = new CheckBox.CheckBox("Traces", { style_class: "check-box devtools-checkBox" });
         bottomBox.add_actor(this.traces.actor);
         this.traces.actor.checked = this.settings.getValue("clShowTraces");
@@ -188,7 +188,7 @@ CinnamonLogInterface.prototype = {
         bottomBox.add(new St.BoxLayout(), { expand: true });
         
         let copyButton = new St.Button();
-        copyBox = new St.BoxLayout();
+        let copyBox = new St.BoxLayout();
         copyButton.add_actor(copyBox);
         copyBox.add_actor(new St.Icon({ icon_name: "edit-copy", icon_size: 16, icon_type: St.IconType.SYMBOLIC }));
         copyBox.add_actor(new St.Label({ text: "Copy" }));

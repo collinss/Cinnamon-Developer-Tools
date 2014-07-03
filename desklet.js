@@ -33,6 +33,7 @@ const Windows = imports.windows;
 const Extensions = imports.extensions;
 const ErrorLog = imports.errorLog;
 const Terminal = imports.terminal;
+const Inspect = imports.inspect;
 
 //global constants
 const POPUP_MENU_ICON_SIZE = 24;
@@ -619,7 +620,6 @@ myDesklet.prototype = {
     
     newSandbox: function() {
         let sandbox = new Sandbox.SandboxInterface();
-        this.interfaces.push(sandbox);
         this.tabManager.add(sandbox);
         this.tabManager.selectItem(sandbox);
     },
@@ -638,12 +638,15 @@ myDesklet.prototype = {
     inspect: function() {
         this.lower();
         
-        if ( this.lgOpen ) {
-            Util.spawnCommandLine("cinnamon-looking-glass inspect");
-        }
-        else {
-            Main.createLookingGlass().startInspector();
-        }
+        let inspector = new Inspect.Inspector();
+        
+        inspector.connect("target", Lang.bind(this, this.onTarget));
+    },
+    
+    onTarget: function(inspector, target, x, y) {
+        let inspect = new Inspect.InspectInterface(target, x, y);
+        this.tabManager.add(inspect);
+        this.tabManager.selectItem(inspect);
     },
     
     setHideState: function(event) {

@@ -108,8 +108,8 @@
     spacing: 5px;
 }
 
-.devtools-checkBox StLabel {
-    
+.devtools-checkBox {
+    /*min-width: 125px;*/
 }
 
 .devtools-fileDialog-contentBox {
@@ -118,4 +118,12 @@
 
 .devtools-fileDialog-entry {
     background-color: white;
+}
+
+.devtools-inspect-content {
+    spacing: 10px;
+}
+
+.devtools-inspect-scrollbox {
+    
 }
