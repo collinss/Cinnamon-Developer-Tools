@@ -149,9 +149,10 @@ Terminal.prototype = {
                 return;
             }
             
+            let result, pId, inId, outId, errId;
             try {
                 let flags = GLib.SpawnFlags.SEARCH_PATH;
-                let [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
+                [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
             } catch(e) {
                 Main.notify("Error while trying to run \"" + input + "\"", e.message);
                 return;
