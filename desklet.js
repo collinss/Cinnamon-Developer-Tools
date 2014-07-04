@@ -501,7 +501,7 @@ myDesklet.prototype = {
             this.contentArea.add(this.tabBox);
             this.tabManager = new Tab.TabManager(this.tabBox, this.panelBox);
             
-            this.addContent();
+            this.addDefaultTabs();
             
         } catch(e) {
             global.logError(e);
@@ -547,6 +547,14 @@ myDesklet.prototype = {
         sandboxButton.connect("clicked", Lang.bind(this, this.newSandbox));
         new Tooltips.Tooltip(sandboxButton, _("Start Sandbox"));
         
+        //terminal button
+        let terminalButton = new St.Button({ style_class: "devtools-button" });
+        this.buttonArea.add_actor(terminalButton);
+        let terminalIcon = new St.Icon({ icon_name: "run", icon_size: 20, icon_type: St.IconType.SYMBOLIC });
+        terminalButton.set_child(terminalIcon);
+        terminalButton.connect("clicked", Lang.bind(this, this.newTerminal));
+        new Tooltips.Tooltip(terminalButton, _("Run command line"));
+        
         //inspect button
         let inspectButton = new St.Button({ style_class: "devtools-button" });
         this.buttonArea.add_actor(inspectButton);
@@ -584,13 +592,11 @@ myDesklet.prototype = {
         new Tooltips.Tooltip(restartButton, _("Restart Cinnamon"));
     },
     
-    addContent: function() {
+    addDefaultTabs: function() {
         let cLog = new ErrorLog.CinnamonLogInterface(this.settings);
         this.tabManager.add(cLog);
         let xLog = new ErrorLog.XSessionLogInterface(this.settings);
         this.tabManager.add(xLog);
-        let terminal = new Terminal.TerminalInterface();
-        this.tabManager.add(terminal);
         let applets = new Extensions.ExtensionInterface(null, "Applets", Extension.Type.APPLET);
         this.tabManager.add(applets);
         let desklets = new Extensions.ExtensionInterface(null, "Desklets", Extension.Type.DESKLET);
@@ -616,6 +622,12 @@ myDesklet.prototype = {
                              function() { Util.spawnCommandLine(command); },
                              new St.Icon({ icon_name: "cs-" + SETTINGS_PAGES[i].page, icon_size: POPUP_MENU_ICON_SIZE, icon_type: St.IconType.FULLCOLOR }));
         }
+    },
+    
+    newTerminal: function() {
+        let terminal = new Terminal.TerminalInterface();
+        this.tabManager.add(terminal);
+        this.tabManager.selectItem(terminal);
     },
     
     newSandbox: function() {

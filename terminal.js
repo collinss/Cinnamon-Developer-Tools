@@ -203,10 +203,14 @@ TerminalInterface.prototype = {
     
     _init: function(parent) {
         
-        Interfaces.GenericInterface.prototype._init.call(this);
+        Interfaces.GenericInterface.prototype._init.call(this, true);
         
-        let terminal = new Terminal();
-        this.panel.add_actor(terminal.actor);
+        this.terminal = new Terminal();
+        this.panel.add_actor(this.terminal.actor);
         
+    },
+    
+    onSelected: function() {
+        this.terminal.enter();
     }
 }
