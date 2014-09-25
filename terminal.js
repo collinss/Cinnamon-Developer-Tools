@@ -117,11 +117,18 @@ Terminal.prototype = {
     _init: function() {
         
         this.processes = [];
+        this.workingDirectory = GLib.get_home_dir();
         
         this.actor = new St.BoxLayout({ vertical: true });
         
-        this.input = new St.Entry({ style_class: "devtools-terminal-entry", track_hover: false, can_focus: true });
-        this.actor.add_actor(this.input);
+        let inputBox = new St.BoxLayout({ style_class: "devtools-terminal-entry" });
+        this.actor.add_actor(inputBox);
+        
+        this.prompt = new St.Label({ text: this.workingDirectory+" #"});
+        inputBox.add_actor(this.prompt);
+        
+        this.input = new St.Entry({ track_hover: false, can_focus: true });
+        inputBox.add(this.input, { expand: true });
         this.input.set_name("terminalInput");
         
         let scrollBox = new St.ScrollView();
@@ -143,6 +150,22 @@ Terminal.prototype = {
             if ( input == "" ) return;
             input = input.replace("~/", GLib.get_home_dir() + "/"); //replace all ~/ with path to home directory
             
+            if ( input.substr(0, 3) == "cd " ) {
+                let dir;
+                if ( input[3] == "/" ) {
+                    dir = input.substr(3);
+                }
+                else {
+                    dir = this.workingDirectory + "/" + input.substr(3);
+                }
+                if ( dir.substr(-1) == "/" ) dir = dir.slice(0, -1);
+                if ( GLib.file_test(dir, GLib.FileTest.IS_DIR) ) {
+                    this.workingDirectory = dir;
+                    this.prompt.text = dir + " #";
+                }
+                return;
+            }
+            
             let [success, argv] = GLib.shell_parse_argv(input);
             if ( !success ) {
                 Main.notify("Unable to parse \"" + input + "\"");
@@ -152,7 +175,7 @@ Terminal.prototype = {
             let result, pId, inId, outId, errId;
             try {
                 let flags = GLib.SpawnFlags.SEARCH_PATH;
-                [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(null, argv, null, flags, null, null);
+                [result, pId, inId, outId, errId] = GLib.spawn_async_with_pipes(this.workingDirectory, argv, null, flags, null, null);
             } catch(e) {
                 Main.notify("Error while trying to run \"" + input + "\"", e.message);
                 return;
