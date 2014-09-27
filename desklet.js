@@ -628,12 +628,14 @@ myDesklet.prototype = {
         let terminal = new Terminal.TerminalInterface();
         this.tabManager.add(terminal);
         this.tabManager.selectItem(terminal);
+        if ( this.collapsed ) this.toggleCollapse();
     },
     
     newSandbox: function() {
         let sandbox = new Sandbox.SandboxInterface();
         this.tabManager.add(sandbox);
         this.tabManager.selectItem(sandbox);
+        if ( this.collapsed ) this.toggleCollapse();
     },
     
     launchLookingGlass: function() {
@@ -659,6 +661,7 @@ myDesklet.prototype = {
         let inspect = new Inspect.InspectInterface(target, x, y);
         this.tabManager.add(inspect);
         this.tabManager.selectItem(inspect);
+        if ( this.collapsed ) this.toggleCollapse();
     },
     
     setHideState: function(event) {
