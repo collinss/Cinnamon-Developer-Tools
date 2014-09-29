@@ -422,8 +422,12 @@ myDesklet.prototype = {
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, "collapsed", "collapsed", this.setHideState);
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
         this.settings.bindProperty(Settings.BindingDirection.IN, "centerRaised", "centerRaised");
-        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", this.buildLayout);
-        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", this.buildLayout);
+        this.settings.bindProperty(Settings.BindingDirection.IN, "height", "height", function() {
+            this.contentArea.height = this.height;
+        });
+        this.settings.bindProperty(Settings.BindingDirection.IN, "width", "width", function() {
+            this.contentArea.width = this.width;
+        });
         this.bindKey();
     },
     
