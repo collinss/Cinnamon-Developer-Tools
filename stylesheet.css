@@ -84,7 +84,6 @@
 
 .devtools-sandbox-scrollBox {
     background-color: #ffffff;
-    height: 10em;
 }
 
 .devtools-sandbox-entry {
@@ -113,11 +112,13 @@
 }
 
 .devtools-fileDialog-contentBox {
-    
+    padding-bottom: 5px;
 }
 
 .devtools-fileDialog-entry {
     background-color: white;
+    color: black;
+    selected-color: white;
 }
 
 .devtools-inspect-content {
