@@ -102,7 +102,7 @@ ExtensionItem.prototype = {
                     instanceBox.add_actor(new St.Label({ text: "ID: "+id }));
                     
                     //highlight button
-                    let highlightButton = new St.Button({ label: "Highlight" });
+                    let highlightButton = new St.Button({ label: "Highlight", style_class: "devtools-contentButton" });
                     instanceBox.add_actor(highlightButton);
                     highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(id, true); }));
                     
@@ -115,7 +115,7 @@ ExtensionItem.prototype = {
             else {
                 //highlight button
                 if ( this.type == Extension.Type.APPLET || this.type == Extension.Type.DESKLET ) {
-                    let highlightButton = new St.Button({ label: "Highlight", x_align: St.Align.END });
+                    let highlightButton = new St.Button({ label: "Highlight", x_align: St.Align.END, style_class: "devtools-contentButton" });
                     buttonBox.add_actor(highlightButton);
                     highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(meta.uuid, false); }));
                 }
