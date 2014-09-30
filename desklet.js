@@ -564,7 +564,7 @@ myDesklet.prototype = {
         this.buttonArea.add_actor(inspectButton);
         let inspectIcon = new St.Icon({ icon_name: "inspect", icon_size: 20, icon_type: St.IconType.SYMBOLIC });
         inspectButton.set_child(inspectIcon);
-        inspectButton.connect("clicked", Lang.bind(this, this.inspect));
+        inspectButton.connect("clicked", Lang.bind(this, this.openInspector));
         new Tooltips.Tooltip(inspectButton, _("Inspect"));
         
         //open looking glass button
@@ -653,18 +653,20 @@ myDesklet.prototype = {
         }
     },
     
-    inspect: function() {
+    openInspector: function() {
         this.lower();
         
         let inspector = new Inspect.Inspector();
         
-        inspector.connect("target", Lang.bind(this, this.onTarget));
+        inspector.connect("target", Lang.bind(this, function(inspector, target) {
+            this.inspect(target);
+        }));
     },
     
-    onTarget: function(inspector, target, x, y) {
-        let inspect = new Inspect.InspectInterface(target, x, y);
-        this.tabManager.add(inspect);
-        this.tabManager.selectItem(inspect);
+    inspect: function(target) {
+        let iface = new Inspect.InspectInterface(target, this);
+        this.tabManager.add(iface);
+        this.tabManager.selectItem(iface);
         if ( this.collapsed ) this.toggleCollapse();
     },
     

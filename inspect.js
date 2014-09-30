@@ -130,7 +130,6 @@ Inspector.prototype = {
 
         this._eventHandler.destroy();
         this._eventHandler = null;
-        this.emit('closed');
     },
 
     _onDestroy: function() {
@@ -147,7 +146,7 @@ Inspector.prototype = {
     _onButtonPressEvent: function (actor, event) {
         if (this._target) {
             let [stageX, stageY] = event.get_coords();
-            this.emit('target', this._target, stageX, stageY);
+            this.emit("target", this._target);
         }
         this._close();
         return true;
@@ -217,8 +216,8 @@ Inspector.prototype = {
 Signals.addSignalMethods(Inspector.prototype);
 
 
-function InspectInterface(target, x, y) {
-    this._init(target, x, y);
+function InspectInterface(target, controller) {
+    this._init(target, controller);
 }
 
 InspectInterface.prototype = {
@@ -226,9 +225,11 @@ InspectInterface.prototype = {
     
     name: _("Inspect"),
     
-    _init: function(target, x, y) {
+    _init: function(target, controller) {
         
         Interfaces.GenericInterface.prototype._init.call(this, true);
+        
+        this.controller = controller;
         
         let scrollBox = new St.ScrollView({ style_class: "devtools-inspect-scrollbox"});
         this.panel.add_actor(scrollBox);
@@ -239,21 +240,51 @@ InspectInterface.prototype = {
         let objName = new St.Label({ text: "Details for "+target });
         content.add_actor(objName);
         
-        //if ( target instanceof Clutter.actor ) {
-        //    global.log("hello");
-        //}
+        if ( target instanceof Clutter.Actor ) {
+            //parent actor
+            let parent = target.get_parent();
+            let parentBox = new St.BoxLayout();
+            content.add_actor(parentBox);
+            parentBox.add_actor(new St.Label({ text: "Parent: " }));
+            let parentButton = new St.Button({ label: String(parent), x_align: St.Align.END, style_class: "devtools-contentButton" });
+            parentBox.add_actor(parentButton);
+            if ( parent ) parentButton.connect("clicked", Lang.bind(this, this.inspectNew, parent));
+            
+            //child actors
+            let children = target.get_children();
+            if ( children.length == 0 ) {
+                content.add_actor(new St.Label({ text: "No Children" }));
+            }
+            else if ( children.length == 1 ) {
+                let childBox = new St.BoxLayout();
+                content.add_actor(childBox);
+                childBox.add_actor(new St.Label({ text: "Child: " }));
+                let childButton = new St.Button({ label: String(children[0]), style_class: "devtools-contentButton" });
+                childBox.add_actor(childButton);
+                childButton.connect("clicked", Lang.bind(this, this.inspectNew, children[0]));
+            }
+            else {
+                let childrenBox = new St.BoxLayout({ vertical: true, style_class: "devtools-indentedBox" });
+                let childrenList = new CollapseButton.CollapseButton("Children", false, childrenBox);
+                content.add_actor(childrenList.actor);
+                for ( let i = 0; i < children.length; i++ ) {
+                    let child = children[i];
+                    let childButton = new St.Button({ label: String(children[i]), x_align: St.Align.START, style_class: "devtools-contentButton" });
+                    childrenBox.add_actor(childButton);
+                    childButton.connect("clicked", Lang.bind(this, this.inspectNew, children[i]));
+                }
+            }
+            
+            let height = new St.Label({ text: "Height: "+target.height+" pixels" });
+            content.add_actor(height);
+            let width = new St.Label({ text: "Width: "+target.width+" pixels" });
+            content.add_actor(width);
+            
+            let styleClass = new St.Label({ text: "Style Class: "+target.style_class });
+            content.add_actor(styleClass);
+        }
         
-        let height = new St.Label({ text: "Height: "+target.height+" pixels" });
-        content.add_actor(height);
-        let width = new St.Label({ text: "Width: "+target.width+" pixels" });
-        content.add_actor(width);
-        
-        let styleClass = new St.Label({ text: "Style Class: "+target.style_class });
-        content.add_actor(styleClass);
-        
-        
-        
-        this.propertiesBox = new St.BoxLayout({ vertical: true });
+        this.propertiesBox = new St.BoxLayout({ vertical: true, style_class: "devtools-indentedBox" });
         let properties = new CollapseButton.CollapseButton("Object Properties", false, this.propertiesBox);
         content.add_actor(properties.actor);
         
@@ -265,5 +296,9 @@ InspectInterface.prototype = {
         let propertiesText = properties.sort().join("\n");
         let propLabel = new St.Label({ text: propertiesText });
         this.propertiesBox.add_actor(propLabel);
+    },
+    
+    inspectNew: function(a, b, actor) {
+        this.controller.inspect(actor);
     }
 }

@@ -27,6 +27,10 @@
     padding: 3px;
 }
 
+.devtools-indentedBox {
+    padding-left: 20px;
+}
+
 /*terminal*/
 .devtools-terminal-entry {
     background-color: #ffffff;
