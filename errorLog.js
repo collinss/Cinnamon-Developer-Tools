@@ -1,4 +1,5 @@
 const CheckBox = imports.ui.checkBox;
+const LookingGlassDBus = imports.ui.lookingGlassDBus;
 const Main = imports.ui.main;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
@@ -195,28 +196,19 @@ CinnamonLogInterface.prototype = {
         bottomBox.add_actor(copyButton);
         copyButton.connect("clicked", Lang.bind(this, this.copy));
         
+        this.connectToLgDBus();
     },
     
     connectToLgDBus: function() {
-        let proxy = new Gio.DBusProxy({ g_bus_type: Gio.BusType.SESSION,
-                                        g_flags: Gio.DBusProxyFlags.NONE,
-                                        g_interface_info: null,
-                                        g_name: "org.Cinnamon.LookingGlass",
-                                        g_object_path: "/org/Cinnamon/LookingGlass",
-                                        g_interface_name: "org.Cinnamon.LookingGlass" });
-        
-        //let proxy = new Gio.DBusProxy.for_bus_sync(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, null, "org.Cinnamon.LookingGlass", "/org/Cinnamon/LookingGlass", "org.Cinnamon.LookingGlass", null);
-        proxy.connect("g-signal", Lang.bind(this, function(proxy, senderName, signalName, params) {
-                global.logError("testing");
-            if ( senderName == "LogUpdate" ) {
-                this.getText();
-            }
+        let proxy = Gio.DBusProxy.makeProxyWrapper(LookingGlassDBus.LookingGlassIface);
+        new proxy(Gio.DBus.session, LookingGlassDBus.LG_SERVICE_NAME, LookingGlassDBus.LG_SERVICE_PATH, Lang.bind(this, function(proxy, error) {
+            this._proxy = proxy;
+            this._proxy.connectSignal("LogUpdate", Lang.bind(this, this.getText));
         }));
     },
     
     getText: function() {
-        try {
-            //if the tab is not shown don't waste resources on refreshing content
+        //if the tab is not shown don't waste resources on refreshing content
         if ( !this.selected ) return;
         
         let stack = Main._errorLogStack;
@@ -249,16 +241,10 @@ CinnamonLogInterface.prototype = {
             let adjustment = this.scrollBox.get_vscroll_bar().get_adjustment();
             adjustment.value = this.contentText.height - adjustment.page_size;
         }
-        
-        Mainloop.timeout_add_seconds(CINNAMON_LOG_REFRESH_TIMEOUT, Lang.bind(this, this.getText));
-        } catch(e) {
-            global.logError(e);
-        }
     },
     
     onSelected: function() {
-        Mainloop.idle_add(Lang.bind(this, this.getText));
-        this.connectToLgDBus();
+        this.getText();
     },
     
     copy: function() {
