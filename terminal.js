@@ -11,7 +11,7 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Interfaces = imports.interfaces;
+const TabPanel = imports.tabPanel;
 const CollapseButton = imports.collapseButton;
 
 
@@ -221,13 +221,13 @@ function TerminalInterface(parent) {
 }
 
 TerminalInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     name: _("Run"),
     
     _init: function(parent) {
         
-        Interfaces.GenericInterface.prototype._init.call(this, true);
+        TabPanel.TabPanelBase.prototype._init.call(this, true);
         
         this.terminal = new Terminal();
         this.panel.add_actor(this.terminal.actor);

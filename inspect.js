@@ -7,7 +7,7 @@ const Lang = imports.lang;
 const Signals = imports.signals;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Interfaces = imports.interfaces;
+const TabPanel = imports.tabPanel;
 const CollapseButton = imports.collapseButton;
 
 
@@ -221,13 +221,13 @@ function InspectInterface(target, controller) {
 }
 
 InspectInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     name: _("Inspect"),
     
     _init: function(target, controller) {
         
-        Interfaces.GenericInterface.prototype._init.call(this, true);
+        TabPanel.TabPanelBase.prototype._init.call(this, true);
         
         this.controller = controller;
         

@@ -8,7 +8,7 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Interfaces = imports.interfaces;
+const TabPanel = imports.tabPanel;
 
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
 const XSESSION_LOG_REFRESH_TIMEOUT = 10;
@@ -22,13 +22,13 @@ function XSessionLogInterface(settings) {
 }
 
 XSessionLogInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     name: _("X-Session Log"),
     
     _init: function(settings) {
         
-        Interfaces.GenericInterface.prototype._init.call(this);
+        TabPanel.TabPanelBase.prototype._init.call(this);
         
         this.settings = settings;
         this.start = 0;
@@ -117,13 +117,13 @@ function CinnamonLogInterface(settings) {
 }
 
 CinnamonLogInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     name: _("Cinnamon Log"),
     
     _init: function(settings) {
         
-        Interfaces.GenericInterface.prototype._init.call(this);
+        TabPanel.TabPanelBase.prototype._init.call(this);
         
         this.settings = settings;
         

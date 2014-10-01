@@ -12,7 +12,7 @@ const Lang = imports.lang;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
 const Tab = imports.tab;
-const Interfaces = imports.interfaces;
+const TabPanel = imports.tabPanel;
 
 
 function FileEntryDialog(callback, filePath) {
@@ -236,17 +236,17 @@ function SandboxInterface() {
 }
 
 SandboxInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     name: _("Sandbox"),
     
     _init: function() {
         try {
-            Interfaces.GenericInterface.prototype._init.call(this, true);
+            TabPanel.TabPanelBase.prototype._init.call(this, true);
             
             let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
             this.panel.add_actor(tabs);
-            let tabPanels = new St.BoxLayout({ height: 120, style_class: "devtools-sandbox-tabpanels" });
+            let tabPanels = new St.BoxLayout({ height: 120, style_class: "devtools-sandbox-tabPanels" });
             this.panel.add(tabPanels, { expand: true });
             this.tabManager = new Tab.TabManager(tabs, tabPanels);
             

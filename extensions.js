@@ -12,7 +12,7 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Interfaces = imports.interfaces;
+const TabPanel = imports.tabPanel;
 const CollapseButton = imports.collapseButton;
 
 
@@ -193,14 +193,14 @@ function ExtensionInterface(parent, name, info) {
 }
 
 ExtensionInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     _init: function(parent, name, info) {
         try {
             
             this.name = name;
             this.info = info;
-            Interfaces.GenericInterface.prototype._init.call(this);
+            TabPanel.TabPanelBase.prototype._init.call(this);
             
             let scrollBox = new St.ScrollView();
             this.panel.add_actor(scrollBox);

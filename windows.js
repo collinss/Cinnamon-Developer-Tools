@@ -5,7 +5,7 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Interfaces = imports.interfaces;
+const TabPanel = imports.tabPanel;
 
 
 function WindowItem(window) {
@@ -128,13 +128,13 @@ function WindowInterface(parent) {
 }
 
 WindowInterface.prototype = {
-    __proto__: Interfaces.GenericInterface.prototype,
+    __proto__: TabPanel.TabPanelBase.prototype,
     
     name: _("Windows"),
     
     _init: function(parent) {
         
-        Interfaces.GenericInterface.prototype._init.call(this);
+        TabPanel.TabPanelBase.prototype._init.call(this);
         
         this.windowObjects = [];
         let tracker = Cinnamon.WindowTracker.get_default();

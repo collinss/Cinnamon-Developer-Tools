@@ -4,11 +4,11 @@ imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"
 const Tab = imports.tab;
 
 
-function GenericInterface(canClose) {
+function TabPanelBase(canClose) {
     this._init(canClose);
 }
 
-GenericInterface.prototype = {
+TabPanelBase.prototype = {
     __proto__: Tab.TabItemBase.prototype,
     
     name: _("Untitled"),
