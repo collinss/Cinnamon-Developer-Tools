@@ -6,7 +6,6 @@ const GLib = imports.gi.GLib;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 const Lang = imports.lang;
-const Mainloop = imports.mainloop;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
 const TabPanel = imports.tabPanel;
@@ -69,14 +68,17 @@ XSessionLogInterface.prototype = {
         clearButton.add_actor(clearBox);
         clearBox.add_actor(new St.Label({ text: _("Clear") }));
         clearButton.connect("clicked", Lang.bind(this, this.clear));
+        
+        this.file = Gio.file_new_for_path(GLib.get_home_dir() + "/.xsession-errors")
+        let monitor = this.file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        monitor.connect("changed", Lang.bind(this, this.getText));
     },
     
     getText: function() {
         //if the tab is not shown don't waste resources on refreshing content
         if ( !this.selected ) return;
         
-        let file = Gio.file_new_for_path(GLib.get_home_dir() + "/.xsession-errors")
-        file.load_contents_async(null, Lang.bind(this, function(file, result) {
+        this.file.load_contents_async(null, Lang.bind(this, function(file, result) {
             try {
                 let text = "";
                 let lines = String(file.load_contents_finish(result)[1]).split("\n");
@@ -98,8 +100,6 @@ XSessionLogInterface.prototype = {
                 global.logError(e);
             }
         }));
-        
-        Mainloop.timeout_add_seconds(XSESSION_LOG_REFRESH_TIMEOUT, Lang.bind(this, this.getText));
     },
     
     onSelected: function() {
@@ -188,7 +188,7 @@ CinnamonLogInterface.prototype = {
         
         bottomBox.add(new St.BoxLayout(), { expand: true });
         
-        let copyButton = new St.Button();
+        let copyButton = new St.Button({ style_class: "devtools-contentButton" });
         let copyBox = new St.BoxLayout();
         copyButton.add_actor(copyBox);
         copyBox.add_actor(new St.Icon({ icon_name: "edit-copy", icon_size: 16, icon_type: St.IconType.SYMBOLIC }));
