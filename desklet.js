@@ -411,6 +411,10 @@ myDesklet.prototype = {
         }
     },
     
+    on_desklet_added_to_desktop: function() {
+        this.tabManager.selectIndex(0);
+    },
+    
     openAbout: function() {
         new AboutDialog(this.metadata);
     },
@@ -609,8 +613,6 @@ myDesklet.prototype = {
         this.tabManager.add(extensions);
         let windows = new Windows.WindowInterface();
         this.tabManager.add(windows);
-        
-        this.tabManager.selectIndex(0);
     },
     
     _populateSettingsMenu: function() {
