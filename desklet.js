@@ -34,6 +34,7 @@ const Extensions = imports.extensions;
 const ErrorLog = imports.errorLog;
 const Terminal = imports.terminal;
 const Inspect = imports.inspect;
+const Text = imports.text;
 
 //global constants
 const POPUP_MENU_ICON_SIZE = 24;
@@ -117,6 +118,8 @@ AboutDialog.prototype = {
             /*optional content*/
             let scrollBox = new St.ScrollView({ style_class: "about-scrollBox" });
             contentBox.add(scrollBox, { expand: true });
+            scrollBox._delegate = this;
+            
             let infoBox = new St.BoxLayout({ vertical: true, style_class: "about-scrollBox-innerBox" });
             scrollBox.add_actor(infoBox);
             
@@ -396,6 +399,8 @@ myDesklet.prototype = {
             
             Desklet.Desklet.prototype._init.call(this, metadata, desklet_id);
             
+            this.isLoaded = false;
+            
             Gtk.IconTheme.get_default().append_search_path(this.metadata.path + "/buttons/");
             this._bindSettings();
             
@@ -406,13 +411,18 @@ myDesklet.prototype = {
             
             this.setHeader(_("Tools"));
             
+            this.actor.connect("motion-event", Lang.bind(this, this.onMotionEvent));
+            
         } catch(e) {
             global.logError(e);
         }
     },
     
     on_desklet_added_to_desktop: function() {
-        this.tabManager.selectIndex(0);
+        if ( !this.isLoaded ) {
+            this.tabManager.selectIndex(0);
+            this.isLoaded = true;
+        }
     },
     
     openAbout: function() {
@@ -722,6 +732,14 @@ myDesklet.prototype = {
     toggleCollapse: function() {
         this.collapsed = !this.collapsed;
         this.setHideState();
+    },
+    
+    onMotionEvent: function(a, event) {
+        let target = event.get_source();
+        if ( target && target._delegate && target._delegate instanceof Text.Entry ) {
+            this._draggable.inhibit = true;
+        }
+        else this._draggable.inhibit = false;
     }
 }
 
