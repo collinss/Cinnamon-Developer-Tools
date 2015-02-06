@@ -94,12 +94,12 @@
     /*height: 0px;*/
 }
 
-.devtools-sandbox-scrollBox {
+.devtools-sandbox-entryText {
     background-color: #ffffff;
-}
-
-.devtools-sandbox-entry {
+    padding: 5px;
+    font: 14px courier, monospace;
     color: #000000;
+    selected-color: white;
 }
 
 .devtools-sandbox-buttonBox {

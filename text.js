@@ -3,6 +3,7 @@ const Clutter = imports.gi.Clutter;
 const Gtk = imports.gi.Gtk;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
+const Main = imports.ui.main;
 const Params = imports.misc.params;
 const Lang = imports.lang;
 
@@ -47,7 +48,8 @@ TextAllocator.prototype = {
             this.widthSet = false;
         }
         
-        this.actor = new St.Bin({ x_expand: !this.widthSet, x_fill: !this.widthSet, x_align: St.Align.START, y_expand: !this.heightSet, y_fill: !this.heightSet, y_align: St.Align.START });
+        this.actor = new St.Bin({ reactive: true, track_hover: true, x_expand: !this.widthSet, x_fill: !this.widthSet, x_align: St.Align.START, y_expand: !this.heightSet, y_fill: !this.heightSet, y_align: St.Align.START });
+        this.actor._delegate = this;
         
         this._outerWrapper = new Cinnamon.GenericContainer();
         this.actor.add_actor(this._outerWrapper);
@@ -58,12 +60,13 @@ TextAllocator.prototype = {
         this.scroll = new St.ScrollView(props);
         this._outerWrapper.add_actor(this.scroll);
         this.scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+        this.scroll._delegate = this;
         
-        let box = new St.BoxLayout();
-        this.scroll.add_actor(box);
+        this.scrolledContent = new St.BoxLayout();
+        this.scroll.add_actor(this.scrolledContent);
         
         this._innerWrapper = new Cinnamon.GenericContainer();
-        box.add_actor(this._innerWrapper);
+        this.scrolledContent.add_actor(this._innerWrapper);
         this._innerWrapper.add_actor(textObj);
         
         this.text = textObj.clutter_text;
@@ -86,8 +89,9 @@ TextAllocator.prototype = {
     },
     
     allocateOuter: function(actor, box, flags) {
-//global.logWarning("allocate");
+//if (this.entry) global.logWarning(String(box.y1)+", "+box.y2);
         this.outerWidth = box.x2 - box.x1;
+        this.outerHeight = box.y2 - box.y1;
         
         let childBox = new Clutter.ActorBox();
         
@@ -126,8 +130,9 @@ TextAllocator.prototype = {
         childBox.x1 = box.x1;
         childBox.x2 = box.x2;
         childBox.y1 = box.y1;
-        childBox.y2 = box.y2;
-        this.label.allocate(childBox, flags);
+        let height = this.text.get_preferred_height(this.getInnerWidth())[1];
+        childBox.y2 = box.y1+height;
+        this.textObj.allocate(childBox, flags);
     },
     
     getPreferedInnerHeight: function(actor, forWidth, alloc) {
@@ -140,6 +145,12 @@ TextAllocator.prototype = {
         let width = this.getInnerWidth();
         alloc.min_size = width;
         alloc.natural_size = width;
+    },
+    
+    getInnerHeight: function() {
+        let sNode = this.scroll.get_theme_node();
+        let height = sNode.adjust_for_height(this.outerHeight);
+        return height;
     },
     
     getInnerWidth: function() {
@@ -172,8 +183,68 @@ Entry.prototype = {
     __proto__: TextAllocator.prototype,
     
     _init: function(params) {
-        this.entry = new St.Entry();
+        this.entry = new St.Entry({ reactive: true, track_hover: true });
         
-        TextAllocator.prototype._init.call(this, this.label, params);
+        TextAllocator.prototype._init.call(this, this.entry, params);
+        
+        this.previousMode = null;
+        
+        this.text.connect("button-press-event", Lang.bind(this, this.onButtonPress));
+        this.actor.connect("button-press-event", Lang.bind(this, this.onButtonPress));
+        this.text.connect("cursor-event", Lang.bind(this, this.handleScrollPosition));
+    },
+    
+    onButtonPress: function(actor, event) {
+        if ( this.capturedEventId ) return;
+        this.buttonReleaseId = this.text.connect("button-release-event", Lang.bind(this, this.onButtonRelease));
+        if ( event.get_source() != this.text ) {
+            this.text.cursor_position = this.text.selection_bound = this.text.text.length;
+        }
+        
+        if ( !this.previousMode ) this.previousMode = global.stage_input_mode;
+        global.set_stage_input_mode(Cinnamon.StageInputMode.FOCUSED);
+        this.entry.grab_key_focus();
+        global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
+        Clutter.grab_pointer(this.text);
+        this.pointerGrabbed = true;
+    },
+    
+    onButtonRelease: function(actor, event) {
+        if ( this.capturedEventId ) {
+            this.text.disconnect(this.buttonReleaseId);
+            this.capturedEventId = null;
+        }
+        if ( this.pointerGrabbed ) {
+            Clutter.ungrab_pointer();
+            this.pointerGrabbed = false;
+        }
+        
+        if ( this.previousMode ) {
+            global.set_stage_input_mode(this.previousMode);
+            this.previousMode = null;
+        }
+        
+        return false;
+    },
+    
+    handleScrollPosition: function(text, geometry) {
+        let textHeight = this.entry.height;
+        let scrollHeight = this.getInnerHeight();
+        
+        if ( textHeight <= scrollHeight ) return;
+        
+        let adjustment = this.scrolledContent.vadjustment;
+        let cursorY = geometry.y;
+        let startY = adjustment.value;
+        let endY = scrollHeight + startY;
+        
+        if ( cursorY < startY + geometry.height*2 ) {
+            let desiredPosition = cursorY - geometry.height*2;
+            adjustment.set_value(( desiredPosition > 0 ? desiredPosition : 0 ));
+        }
+        else if ( cursorY > endY - geometry.height*3 ) {
+            let desiredPosition = cursorY + geometry.height*3;
+            adjustment.set_value(( desiredPosition < textHeight ? desiredPosition : textHeight ) - scrollHeight);
+        }
     }
 }
