@@ -193,7 +193,7 @@ Inspector.prototype = {
 
     _update: function(event) {
         let [stageX, stageY] = event.get_coords();
-        let target = global.stage.get_actor_at_pos(Clutter.PickMode.ALL,
+        let target = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE,
                                                    stageX,
                                                    stageY);
 
