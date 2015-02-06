@@ -129,8 +129,6 @@ CinnamonLogInterface.prototype = {
         
         this.settings = settings;
         
-        this.scrollBox = new St.ScrollView();
-        
         //content text
         this.text = new Text.Label();
         this.panel.add(this.text.actor, { expand: true });
