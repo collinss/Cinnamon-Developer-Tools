@@ -463,7 +463,7 @@ myDesklet.prototype = {
         rtButton.set_child(rtIcon);
         this.buttonArea.add_actor(rtButton);
         rtButton.connect("clicked", Lang.bind(this, function() {
-            Main.loadTheme();
+            Main.themeManager._changeTheme();
         }));
         new Tooltips.Tooltip(rtButton, _("Reload Theme"));
         
