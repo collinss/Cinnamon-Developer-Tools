@@ -300,7 +300,6 @@ myDesklet.prototype = {
     
     _bindSettings: function() {
         this.settings = new Settings.DeskletSettings(this, this.metadata.uuid, this.instance_id);
-        this.settings.bindProperty(Settings.BindingDirection.IN, "lgOpen", "lgOpen", function() {});
         this.settings.bindProperty(Settings.BindingDirection.IN, "collapsedStartState", "collapsedStartState", function() {});
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, "collapsed", "collapsed", this.setHideState);
         this.settings.bindProperty(Settings.BindingDirection.IN, "raiseKey", "raiseKey", this.bindKey);
@@ -525,13 +524,7 @@ myDesklet.prototype = {
     
     launchLookingGlass: function() {
         this.lower();
-        
-        if ( this.lgOpen ) {
-            Util.spawnCommandLine("cinnamon-looking-glass");
-        }
-        else {
-            Main.createLookingGlass().open();
-        }
+        Main.createLookingGlass().open();
     },
     
     openInspector: function() {

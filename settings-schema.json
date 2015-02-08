@@ -16,12 +16,6 @@
         "description": "Collapsed"
     },
     
-    "lgOpen": {
-        "type": "checkbox",
-        "default": false,
-        "description": "Use stand-alone Looking Glass (Melange) instead of the buildt-in Cinnamon one"
-    },
-    
     "raiseKey": {
         "type": "keybinding",
         "description": "Raise to top shorcut key",
