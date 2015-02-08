@@ -40,14 +40,20 @@ TextEditor.prototype = {
             let openFileButton = new St.Button();
             this.buttonBox.add_actor(openFileButton);
             openFileButton.add_actor(new St.Icon({ icon_name: "fileopen", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
-            openFileButton.connect("clicked", Lang.bind(this, this.openFile));
-            new Tooltips.Tooltip(openFileButton, _("Load from file"));
+            openFileButton.connect("clicked", Lang.bind(this, this.getOpenFile));
+            new Tooltips.Tooltip(openFileButton, _("Open"));
             
             let saveFileButton = new St.Button();
             this.buttonBox.add_actor(saveFileButton);
             saveFileButton.add_actor(new St.Icon({ icon_name: "filesave", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
             saveFileButton.connect("clicked", Lang.bind(this, this.saveFile));
-            new Tooltips.Tooltip(saveFileButton, _("Save to file"));
+            new Tooltips.Tooltip(saveFileButton, _("Save"));
+            
+            let saveasFileButton = new St.Button();
+            this.buttonBox.add_actor(saveasFileButton);
+            saveasFileButton.add_actor(new St.Icon({ icon_name: "filesaveas", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
+            saveasFileButton.connect("clicked", Lang.bind(this, this.getSaveFile));
+            new Tooltips.Tooltip(saveasFileButton, _("Save As"));
             
             let textArea = new Text.Entry({ style_class: "devtools-sandbox-entryText" });
             content.add(textArea.actor, { expand: true });
@@ -71,11 +77,16 @@ TextEditor.prototype = {
         if ( !fullscreen ) global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
     },
     
-    openFile: function() {
+    getOpenFile: function() {
         Util.spawn_async(["python", DESKLET_PATH+"/file.py", "0"], Lang.bind(this, this.loadFromFile));
     },
     
     saveFile: function() {
+        if ( this.file ) this.saveToFile(this.file.get_path());
+        else this.getSaveFile();
+    },
+    
+    getSaveFile: function() {
         let path;
         let args = ["python", DESKLET_PATH+"/file.py", "1"];
         if ( this.file ) args.push(this.file.get_path());
