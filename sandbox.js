@@ -9,126 +9,13 @@ const Gtk = imports.gi.Gtk;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 const Lang = imports.lang;
+const Util = imports.misc.util;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
+const DESKLET_PATH = imports.ui.deskletManager.deskletMeta["devTools@scollins"].path 
+imports.searchPath.push(DESKLET_PATH);
 const Tab = imports.tab;
 const TabPanel = imports.tabPanel;
-
-
-function FileEntryDialog(callback, filePath) {
-    this._init(callback, filePath);
-}
-
-FileEntryDialog.prototype = {
-    __proto__: ModalDialog.ModalDialog.prototype,
-    
-    _init: function(callback, filePath) {
-        try {
-            
-            this.callback = callback;
-            ModalDialog.ModalDialog.prototype._init.call(this, {  });
-            
-            let contentBox = new St.BoxLayout({ vertical: true, style_class: "devtools-fileDialog-contentBox" });
-            this.contentLayout.add_actor(contentBox);
-            
-            let text;
-            if ( filePath ) text = filePath;
-            else text = "";
-            this.fileEntry = new St.Entry({ style_class: "devtools-fileDialog-entry", can_focus: true, text: text });
-            contentBox.add_actor(this.fileEntry);
-            this.fileEntry.clutter_text.connect("key-press-event", Lang.bind(this, this.onKeyPressed));
-            
-            //dialog close button
-            this.setButtons([
-                { label: "Cancel", key: "", focus: true, action: Lang.bind(this, this.onCancel) },
-                { label: "Open", key: "", focus: true, action: Lang.bind(this, this.onOk) }
-            ]);
-            
-            this.setInitialKeyFocus(this.fileEntry);
-            
-            this.open(global.get_current_time());
-            
-        } catch(e) {
-            global.logError(e);
-        }
-    },
-    
-    onOk: function() {
-        let fileName = this.fileEntry.text;
-        fileName = fileName.replace("~", GLib.get_home_dir());
-        let file = Gio.file_new_for_path(fileName);
-        if ( !file.query_exists(null) ) return;
-        
-        this.close(global.get_current_time());
-        this.callback(file);
-    },
-    
-    onCancel: function() {
-        this.close(global.get_current_time());
-    },
-    
-    onKeyPressed: function(object, event) {
-        let symbol = event.get_key_symbol();
-        switch ( symbol ) {
-            case Clutter.Return:
-            case Clutter.KP_Enter:
-                this.onOk();
-                return true;
-            case Clutter.KEY_Tab:
-                this.autoComplete();
-                return true;
-            default:
-                return false;
-        }
-    },
-    
-    autoComplete: function() {
-        let array = this.fileEntry.text.replace("~", GLib.get_home_dir()).split("/");
-        let end = array.pop();
-        let basePath = array.join("/");
-        
-        let file = Gio.file_new_for_path(basePath);
-        let enumer = file.enumerate_children("standard::name, standard::type", Gio.FileQueryInfoFlags.NONE, null);
-        
-        let info;
-        let res = [];
-        while ( (info = enumer.next_file(null)) != null ) {
-            let name = info.get_name();
-            if ( info.get_file_type() == Gio.FileType.DIRECTORY ) name += "/";
-            if ( name.search(end) == 0 ) res.push(name);
-        }
-        
-        if ( res.length == 0 ) return;
-        else if ( res.length == 1 ) this.fileEntry.text = basePath + "/" + res[0];
-        else {
-            let cont = true;
-            let pos = end.length;
-            while ( cont ) {
-                let nextLetter = "";
-                for ( let i = 0; i < res.length; i++ ) {
-                    let fName = res[i];
-                    if ( fName.length == pos ) {
-                        cont = false;
-                        break;
-                    }
-                    if ( i == 0 ) nextLetter = fName[pos];
-                    else {
-                        if ( fName[pos] != nextLetter ) {
-                            cont = false;
-                            break;
-                        }
-                    }
-                }
-                if ( cont ) {
-                    end += nextLetter;
-                    pos++;
-                }
-            }
-            
-            this.fileEntry.text = basePath + "/" + end;
-        }
-    }
-}
+const Text = imports.text;
 
 
 function TextEditor(title) {
@@ -162,29 +49,10 @@ TextEditor.prototype = {
             saveFileButton.connect("clicked", Lang.bind(this, this.saveFile));
             new Tooltips.Tooltip(saveFileButton, _("Save to file"));
             
-            //text area
-            let scrollBox = new St.ScrollView({ style_class: "devtools-sandbox-scrollBox" });
-            content.add(scrollBox, { expand: true });
-            scrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
+            let textArea = new Text.Entry({ style_class: "devtools-sandbox-entryText" });
+            content.add(textArea.actor, { expand: true });
+            this.text = textArea.text;
             
-            let textBox = new St.BoxLayout({ vertical: true });
-            scrollBox.add_actor(textBox);
-            
-            this.text = new St.Entry({ track_hover: false, can_focus: true, style_class: "devtools-sandbox-entry" });
-            textBox.add_actor(this.text);
-            this.textBox = this.text;
-            this.text.set_clip_to_allocation(false);
-            this.text.clutter_text.set_single_line_mode(false);
-            this.text.clutter_text.set_activatable(false);
-            this.text.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-            this.text.clutter_text.line_wrap = true;
-            this.text.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
-            
-            let padding = new St.Bin({ reactive: true });
-            textBox.add(new St.Bin({ reactive: true }), { expand: true });
-            
-            this.text.clutter_text.connect("button_press_event", Lang.bind(this, this.enter, this.text));
-            scrollBox.connect("button_press_event", Lang.bind(this, this.enter, this.text));
         } catch(e) {
             global.logError(e);
         }
@@ -204,29 +72,29 @@ TextEditor.prototype = {
     },
     
     openFile: function() {
-        let dialog = new FileEntryDialog(Lang.bind(this, this.loadFromFile));
+        Util.spawn_async(["python", DESKLET_PATH+"/file.py", "0"], Lang.bind(this, this.loadFromFile));
     },
     
     saveFile: function() {
         let path;
-        if ( this.file ) path = this.file.get_path();
-        let dialog = new FileEntryDialog(Lang.bind(this, this.saveToFile), path);
+        let args = ["python", DESKLET_PATH+"/file.py", "1"];
+        if ( this.file ) args.push(this.file.get_path());
+        Util.spawn_async(args, Lang.bind(this, this.saveToFile));
     },
     
-    loadFromFile: function(file) {
-        this.file = file;
-        let [a, contents, b] = file.load_contents(null);
+    loadFromFile: function(path) {
+        if ( path == "" ) return;
+        this.file = Gio.file_new_for_path(path.split("\n")[0]);
+        let [a, contents, b] = this.file.load_contents(null);
         this.text.text = String(contents);
     },
     
-    saveToFile: function(file) {
-        try {
-            this.file = file;
-            let text = this.text.text;
-            file.replace_contents(text, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        } catch(e) {
-            global.logError(e);
-        }
+    saveToFile: function(path) {
+        if ( path == "" ) return;
+        this.file = Gio.file_new_for_path(path.split("\n")[0]);
+        if ( !this.file.query_exists(null) ) this.file.create(Gio.FileCreateFlags.NONE, null);
+        let text = this.text.text;
+        this.file.replace_contents(text, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
     }
 }
 
@@ -273,7 +141,7 @@ SandboxInterface.prototype = {
             evaluateButton.connect("clicked", Lang.bind(this, this.evaluate));
             
             //sandbox preview
-            this.previewer = new St.Bin({ style_class: "devtools-sandbox-previewer" });
+            this.previewer = new St.Bin({ x_expand: true, y_expand: true, x_fill: true, y_fill: true, style_class: "devtools-sandbox-previewer" });
             this.panel.add(this.previewer, { expand: true });
         } catch(e) {
             global.logError(e);
@@ -290,7 +158,10 @@ SandboxInterface.prototype = {
             let result = sandboxCode();
             
             if ( result && result instanceof Clutter.Actor ) actor = result;
-            else actor = new St.Label({ text: result });
+            else {
+                if ( !result ) result = "No errors detected";
+                actor = new Text.Label({ text: result }).actor;
+            }
             
             this.previewer.add_actor(actor);
             
@@ -314,7 +185,7 @@ SandboxInterface.prototype = {
                 }
             }
         } catch(e) {
-            this.previewer.add_actor(new St.Label({ text: String(e) }));
+            this.previewer.add_actor(new Text.Label({ text: String(e) }).actor);
         }
     },
     
