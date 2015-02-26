@@ -8,6 +8,24 @@ imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"
 const TabPanel = imports.tabPanel;
 
 
+let controller;
+
+
+function getWorkspaceForWindow(window) {
+    if ( window.is_on_all_workspaces() ) return [null,"all",null];
+    
+    for ( let id = 0; id < global.screen.n_workspaces; id++ ) {
+        let name = Main.getWorkspaceName(id);
+        let meta = global.screen.get_workspace_by_index(id);
+        if ( meta.list_windows().indexOf(window) != -1 ) {
+            return [meta,name,id];
+        }
+    }
+    
+    return [null,"none",null];
+}
+
+
 function WindowItem(window) {
     this._init(window);
 }
@@ -18,7 +36,8 @@ WindowItem.prototype = {
             
             this.window = window;
             this.app = Cinnamon.WindowTracker.get_default().get_window_app(this.window);
-            let wsName = this.getWorkspace();
+            let [wsMeta,wsName,wsId] = getWorkspaceForWindow(window);
+            this.workspace = wsMeta;
             
             this.window.connect("unmanaged", Lang.bind(this, this.destroy));
             
@@ -87,27 +106,8 @@ WindowItem.prototype = {
         else return new St.Icon({ icon_name: "application-default-icon", icon_size: 48, icon_type: St.IconType.FULLCOLOR });
     },
     
-    getWorkspace: function() {
-        if ( this.window.is_on_all_workspaces() ) {
-            this.workspace = "all";
-            return "All";
-        }
-        
-        for ( let wsId = 0; wsId < global.screen.n_workspaces; wsId++ ) {
-            let name = Main.getWorkspaceName(wsId);
-            let wsMeta = global.screen.get_workspace_by_index(wsId);
-            if ( wsMeta.list_windows().indexOf(this.window) != -1 ) {
-                this.workspace = wsMeta;
-                return name;
-            }
-        }
-        
-        return "none";
-    },
-    
     inspect: function() {
-        Main.createLookingGlass().open();
-        Main.lookingGlass.inspectObject(this.app);
+        controller.inspect(this.window);
     },
     
     switchTo: function() {
@@ -123,8 +123,8 @@ WindowItem.prototype = {
 }
 
 
-function WindowInterface(parent) {
-    this._init(parent);
+function WindowInterface(controllerObj) {
+    this._init(controllerObj);
 }
 
 WindowInterface.prototype = {
@@ -132,7 +132,8 @@ WindowInterface.prototype = {
     
     name: _("Windows"),
     
-    _init: function(parent) {
+    _init: function(controllerObj) {
+        controller = controllerObj;
         
         TabPanel.TabPanelBase.prototype._init.call(this);
         

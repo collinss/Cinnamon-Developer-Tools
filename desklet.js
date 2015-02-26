@@ -489,7 +489,7 @@ myDesklet.prototype = {
         this.tabManager.add(desklets);
         let extensions = new Extensions.ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION);
         this.tabManager.add(extensions);
-        let windows = new Windows.WindowInterface();
+        let windows = new Windows.WindowInterface(this);
         this.tabManager.add(windows);
     },
     
