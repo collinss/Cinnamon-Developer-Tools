@@ -9,6 +9,11 @@ function CollapseButton(label, startState, child) {
 CollapseButton.prototype = {
     _init: function(label, startState, child) {
         this.state = startState;
+        if ( label ) this.labelShowHide = false;
+        else {
+            label = "show";
+            this.labelShowHide = true;
+        }
         
         this.actor = new St.BoxLayout({ vertical: true });
         
@@ -16,7 +21,8 @@ CollapseButton.prototype = {
         this.actor.add_actor(button);
         let buttonBox = new St.BoxLayout();
         button.set_child(buttonBox);
-        buttonBox.add_actor(new St.Label({ text: label }));
+        this.label = new St.Label({ text: label })
+        buttonBox.add_actor(this.label);
         
         this.arrowIcon = new St.Icon({ icon_type: St.IconType.SYMBOLIC, icon_size: 8, style: "padding: 4px;" });
         buttonBox.add_actor(this.arrowIcon);
@@ -45,10 +51,12 @@ CollapseButton.prototype = {
         if ( this.state ) {
             this.childBin.show();
             this.arrowIcon.icon_name = "open";
+            if ( this.labelShowHide ) this.label.text = "hide";
         }
         else {
             this.childBin.hide();
             this.arrowIcon.icon_name = "closed";
+            if ( this.labelShowHide ) this.label.text = "show";
         }
     }
 }
