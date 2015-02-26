@@ -383,8 +383,14 @@ myDesklet.prototype = {
             if ( this.collapsed ) this.contentArea.hide();
             this.panelBox = new St.BoxLayout({ vertical: true, style_class: "devtools-tabPanels" });
             this.contentArea.add(this.panelBox, { expand: true });
+            
+            let scrollBox = new St.ScrollView({ style_class: "devtools-tabScroll" });
+            this.contentArea.add_actor(scrollBox);
+            scrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER);
+            scrollBox.set_auto_scrolling(true);
+            
             this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
-            this.contentArea.add(this.tabBox);
+            scrollBox.add_actor(this.tabBox);
             this.tabManager = new Tab.TabManager(this.tabBox, this.panelBox);
             
             this.addDefaultTabs();

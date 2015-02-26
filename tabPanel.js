@@ -14,12 +14,13 @@ TabPanelBase.prototype = {
     name: _("Untitled"),
     
     _init: function(canClose) {
-        Tab.TabItemBase.prototype._init.call(this, { canClose: canClose });
+        Tab.TabItemBase.prototype._init.call(this, { canClose: canClose, styleClass: "devtools-tab" });
         
         this.panel = new St.BoxLayout({ style_class: "devtools-panel", vertical: true });
         this.setContent(this.panel);
         
-        this.setTabContent(new St.Label({ text: this.name }));
+        let label = new St.Label({ text: this.name });
+        this.setTabContent(label);
     },
     
     _formatTime: function(d) {
