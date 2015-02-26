@@ -522,7 +522,7 @@ myDesklet.prototype = {
     },
     
     newSandbox: function() {
-        let sandbox = new Sandbox.SandboxInterface();
+        let sandbox = new Sandbox.SandboxInterface(this.settings);
         this.tabManager.add(sandbox);
         this.tabManager.selectItem(sandbox);
         if ( this.collapsed ) this.toggleCollapse();

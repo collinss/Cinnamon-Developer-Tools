@@ -110,8 +110,8 @@ TextEditor.prototype = {
 }
 
 
-function SandboxInterface() {
-    this._init();
+function SandboxInterface(settings) {
+    this._init(settings);
 }
 
 SandboxInterface.prototype = {
@@ -119,8 +119,10 @@ SandboxInterface.prototype = {
     
     name: _("Sandbox"),
     
-    _init: function() {
+    _init: function(settings) {
         try {
+            this.settings = settings;
+            
             TabPanel.TabPanelBase.prototype._init.call(this, true);
             
             let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
@@ -162,7 +164,8 @@ SandboxInterface.prototype = {
     evaluate: function() {
         this.previewer.destroy_all_children();
         
-        let jsText = this.jsTab.getText();
+        let header = this.settings.getValue("sandboxHeader");
+        let jsText = header + "\n" + this.jsTab.getText();
         let actor;
         try {
             let sandboxCode = new Function(jsText);
