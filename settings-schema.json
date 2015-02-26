@@ -46,6 +46,13 @@
         "default": 700
     },
     
+    "sandboxHeader": {
+        "type": "textview",
+        "description": "Sandbox header",
+        "default": "const Cinnamon = imports.gi.Cinnamon;\nconst Clutter = imports.gi.Clutter;\nconst Gio = imports.gi.Gio;\nconst GLib = imports.gi.GLib;\nconst Gtk = imports.gi.Gtk;\nconst St = imports.gi.St;\nconst Main = imports.ui.main;\nconst Lang = imports.lang;\nconst Mainloop = imports.mainloop;\nconst Signals = imports.signals;",
+        "height": 100
+    },
+    
     "xsessionHideOld": {
         "type": "generic",
         "default": true
