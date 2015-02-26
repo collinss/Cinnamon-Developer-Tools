@@ -7,6 +7,6 @@
     "version": "2.1",
     "contributors": "Stephen Collins - Author",
     "icon": "applications-development",
-    "prevent-decorations": false
+    "prevent-decorations": true
 }
 

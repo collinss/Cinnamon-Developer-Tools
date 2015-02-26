@@ -1,3 +1,11 @@
+.devtools-mainBox {
+    border: solid 1px #555555;
+    border-radius: 5px;
+    background-color: #dddddd;
+    padding: 5px;
+    color: #000000;
+}
+
 .devtools-panel {
     
 }
@@ -6,28 +14,12 @@
     padding: 3px;
 }
 
-.devtools-tab {
-    padding: 4px;
+.devtools-button:hover {
+    background-color: #ffffff;
+    border-radius: 5px;
 }
 
-.devtools-tab:selected {
-    font-weight: bolder;
-}
-
-.devtools-tabPanels {
-    
-}
-
-.devtools-tabBox {
-    padding: 3px;
-    spacing: 10px;
-}
-
-.devtools-panelButton {
-    padding: 3px;
-}
-
-.devtools-indentedBox {
+.devtools-indented {
     padding-left: 20px;
 }
 
@@ -36,7 +28,63 @@
 }
 
 .devtools-contentButton:hover {
-    color: cyan;
+    background-color: #ffffff;
+    border-radius: 5px;
+    /*color: cyan;*/
+}
+
+.devtools-separator {
+    /*uncomment these lines to make separators disappear*/
+    /*-gradient-height: 0px;*/
+    /*-margin-horizontal: 0px;*/
+    /*height: 0px;*/
+}
+
+.devtools-checkBox {
+    /*min-width: 125px;*/
+}
+
+.multiline-text {
+    /*background-color: white;*/
+    /*color: black;*/
+}
+
+/*tab*/
+.devtools-tab {
+    border: solid 1px #555555;
+    border-radius: 5px;
+    padding: 4px;
+    width: 80px;
+}
+
+.devtools-tab:hover {
+    background-color: white;
+}
+
+.devtools-tab:selected {
+    /*font-weight: bolder;*/
+    color: red;
+}
+
+.devtools-tabPanels {
+    
+}
+
+.devtools-tabBox {
+    padding: 3px;
+    spacing: 6px;
+}
+
+.devtools-tabScroll StScrollBar,
+.devtools-tabScroll StBin#trough,
+.devtools-tabScroll StButton#hhandle,
+.devtools-tabScroll StButton#hhandle:hover {
+    /*border-image: none;*/
+    /*background-image: none;*/
+    /*background-color: blue;*/
+    /*color: blue;*/
+    min-height: 0px;
+    /*width: 0px;*/
 }
 
 /*terminal*/
@@ -87,13 +135,7 @@
     padding: 3px;
 }
 
-.devtools-separator {
-    /*uncomment these lines to make separators disappear*/
-    /*-gradient-height: 0px;*/
-    /*-margin-horizontal: 0px;*/
-    /*height: 0px;*/
-}
-
+/*sandbox*/
 .devtools-sandbox-entryText {
     background-color: #ffffff;
     padding: 5px;
@@ -115,33 +157,21 @@
     spacing: 10px;
 }
 
+/*log*/
 .devtools-log-bottomBox {
     spacing: 5px;
 }
 
-.devtools-checkBox {
-    /*min-width: 125px;*/
-}
-
-.devtools-fileDialog-contentBox {
-    padding-bottom: 5px;
-}
-
-.devtools-fileDialog-entry {
-    background-color: white;
-    color: black;
-    selected-color: white;
-}
-
+/*inspect*/
 .devtools-inspect-content {
-    spacing: 10px;
+    spacing: 5px;
 }
 
 .devtools-inspect-scrollbox {
     
 }
 
-.multiline-text {
-    /*background-color: white;*/
-    /*color: black;*/
+.devtools-inspect-subtitle {
+    font-size: 20px;
+    padding-top: 3px;
 }
