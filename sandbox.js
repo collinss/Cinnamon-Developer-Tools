@@ -202,6 +202,6 @@ SandboxInterface.prototype = {
     
     loadCurentStylesheet: function() {
         let styleSheet = Main.getThemeStylesheet();
-        this.cssTab.loadFromFile(Gio.file_new_for_path(styleSheet));
+        this.cssTab.loadFromFile(styleSheet);
     }
 }
