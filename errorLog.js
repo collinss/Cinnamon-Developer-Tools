@@ -1,5 +1,5 @@
 const CheckBox = imports.ui.checkBox;
-const LookingGlassDBus = imports.ui.lookingGlassDBus;
+const LookingGlass = imports.ui.lookingGlass;
 const Main = imports.ui.main;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
@@ -192,8 +192,8 @@ CinnamonLogInterface.prototype = {
     },
     
     connectToLgDBus: function() {
-        let proxy = Gio.DBusProxy.makeProxyWrapper(LookingGlassDBus.LookingGlassIface);
-        new proxy(Gio.DBus.session, LookingGlassDBus.LG_SERVICE_NAME, LookingGlassDBus.LG_SERVICE_PATH, Lang.bind(this, function(proxy, error) {
+        let proxy = Gio.DBusProxy.makeProxyWrapper(LookingGlass.lgIFace);
+        new proxy(Gio.DBus.session, "org.Cinnamon.LookingGlass", "/org/Cinnamon/LookingGlass", Lang.bind(this, function(proxy, error) {
             this._proxy = proxy;
             this._proxy.connectSignal("LogUpdate", Lang.bind(this, this.getText));
         }));
