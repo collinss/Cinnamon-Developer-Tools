@@ -152,7 +152,7 @@ CinnamonLogInterface.prototype = {
         this.infos.actor.connect("clicked", Lang.bind(this, function() {
             this.settings.setValue("clShowInfos", this.infos.actor.checked);
             this.getText();
-        }))
+        }));
         
         this.warnings = new CheckBox.CheckBox("Warnings", { style_class: "check-box devtools-checkBox" });
         bottomBox.add_actor(this.warnings.actor);
@@ -160,7 +160,7 @@ CinnamonLogInterface.prototype = {
         this.warnings.actor.connect("clicked", Lang.bind(this, function() {
             this.settings.setValue("clShowWarnings", this.warnings.actor.checked);
             this.getText();
-        }))
+        }));
         
         this.errors = new CheckBox.CheckBox("Errors", { style_class: "check-box devtools-checkBox" });
         bottomBox.add_actor(this.errors.actor);
@@ -168,7 +168,7 @@ CinnamonLogInterface.prototype = {
         this.errors.actor.connect("clicked", Lang.bind(this, function() {
             this.settings.setValue("clShowErrors", this.errors.actor.checked);
             this.getText();
-        }))
+        }));
         
         this.traces = new CheckBox.CheckBox("Traces", { style_class: "check-box devtools-checkBox" });
         bottomBox.add_actor(this.traces.actor);
@@ -176,7 +176,7 @@ CinnamonLogInterface.prototype = {
         this.traces.actor.connect("clicked", Lang.bind(this, function() {
             this.settings.setValue("clShowTraces", this.traces.actor.checked);
             this.getText();
-        }))
+        }));
         
         bottomBox.add(new St.BoxLayout(), { expand: true });
         
