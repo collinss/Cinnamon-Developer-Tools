@@ -127,11 +127,14 @@
 
 /*windows*/
 .devtools-windows-mainBox {
-    
+    spacing: 5px;
+    padding: 5px;
 }
 
 .devtools-windows-windowBox {
-    
+    border: solid 1px black;
+    border-radius: 5px;
+    padding: 3px;
 }
 
 .devtools-windows-icon {

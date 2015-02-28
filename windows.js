@@ -162,21 +162,12 @@ WindowInterface.prototype = {
         
         let windows = global.get_window_actors();
         
-        let hasChild = false;
         for ( let i = 0; i < windows.length; i++ ) {
-            if ( hasChild ) {
-                let separator = new PopupMenu.PopupSeparatorMenuItem();
-                this.windowsBox.add_actor(separator.actor);
-                separator.actor.remove_style_class_name("popup-menu-item");
-                separator._drawingArea.add_style_class_name("devtools-separator");
-            }
-            
             let window = windows[i].metaWindow;
             
             let windowBox = new WindowItem(window);
             this.windowsBox.add_actor(windowBox.actor);
             this.windowObjects.push(windowBox);
-            hasChild = true;
         }
     },
     
