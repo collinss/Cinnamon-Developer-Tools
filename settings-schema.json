@@ -81,5 +81,25 @@
     "clShowTraces": {
         "type": "generic",
         "default": true
+    },
+    
+    "showApplet": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "showDesklet": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "showExtension": {
+        "type": "generic",
+        "default": true
+    },
+    
+    "showSearch provider": {
+        "type": "generic",
+        "default": true
     }
 }

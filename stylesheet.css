@@ -103,11 +103,18 @@
 
 /*extensions*/
 .devtools-extension-mainBox {
-    
+    spacing: 5px;
+    padding: 5px;
 }
 
 .devtools-extension-container {
-    
+    border: solid 1px black;
+    border-radius: 5px;
+    padding: 3px;
+}
+
+.devtools-extensions-title {
+    font-weight: bold;
 }
 
 .devtools-extension-buttonBox {

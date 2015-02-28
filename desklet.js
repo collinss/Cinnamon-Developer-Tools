@@ -1,9 +1,5 @@
 //javascript ui imports
-const AppletManager = imports.ui.appletManager;
 const Desklet = imports.ui.desklet;
-const DeskletManager = imports.ui.deskletManager;
-const Extension = imports.ui.extension;
-const Flashspot = imports.ui.flashspot;
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Settings = imports.ui.settings;
@@ -13,16 +9,12 @@ const Tweener = imports.ui.tweener;
 //gobject introspection imports
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
-const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 
 //other imports
 const Util = imports.misc.util;
 const Lang = imports.lang;
-const Mainloop = imports.mainloop;
 const Signals = imports.signals;
 
 imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
@@ -489,11 +481,7 @@ myDesklet.prototype = {
         this.tabManager.add(cLog);
         let xLog = new ErrorLog.XSessionLogInterface(this.settings);
         this.tabManager.add(xLog);
-        let applets = new Extensions.ExtensionInterface(null, "Applets", Extension.Type.APPLET);
-        this.tabManager.add(applets);
-        let desklets = new Extensions.ExtensionInterface(null, "Desklets", Extension.Type.DESKLET);
-        this.tabManager.add(desklets);
-        let extensions = new Extensions.ExtensionInterface(null, "Extensions", Extension.Type.EXTENSION);
+        let extensions = new Extensions.ExtensionInterface(this);
         this.tabManager.add(extensions);
         let windows = new Windows.WindowInterface(this);
         this.tabManager.add(windows);

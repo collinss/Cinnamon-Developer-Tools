@@ -1,3 +1,5 @@
+const Applet = imports.ui.applet;
+const Desklet = imports.ui.desklet;
 const Main = imports.ui.main;
 const Tooltips = imports.ui.tooltips;
 const Cinnamon = imports.gi.Cinnamon;
@@ -13,7 +15,7 @@ const TabPanel = imports.tabPanel;
 const CollapseButton = imports.collapseButton;
 const Windows = imports.windows;
 
-const INSPECTABLE_TYPES = ["object","array","actor","window"];
+const INSPECTABLE_TYPES = ["object","array","actor","window","applet","desklet"];
 
 
 let controller;
@@ -52,6 +54,8 @@ function getType(object) {
         else if ( object instanceof Clutter.Actor ) type = "actor";
         else if ( object instanceof Meta.Window ) type = "window";
         else if ( object instanceof Meta.Workspace ) type = "workspace";
+        else if ( object instanceof Applet.Applet ) type = "applet";
+        else if ( object instanceof Desklet.Desklet ) type = "desklet";
     }
     
     return type;
@@ -271,7 +275,6 @@ InspectInterface.prototype = {
     name: _("Inspect"),
     
     _init: function(target, controllerObj) {
-try {
         TabPanel.TabPanelBase.prototype._init.call(this, true);
         
         this.target = target;
@@ -292,21 +295,22 @@ try {
         switch ( this.type ) {
             case "window":
                 this.generateWindowContent();
-                this.generateObjectContent();
                 break;
             case "array":
                 this.generateArrayContent();
-                this.generateObjectContent();
                 break;
             case "actor":
                 this.generateActorContent();
-                this.generateObjectContent();
                 break;
-            default:
-                this.generateObjectContent();
+            case "applet":
+                this.generateAppletContent();
+                break;
+            case "desklet":
+                this.generateDeskletContent();
                 break;
         }
-}catch(e){global.logError(e);}
+        
+        this.generateObjectContent();
     },
     
     generateArrayContent: function() {
@@ -376,7 +380,16 @@ try {
         this.contentBox.add_actor(new St.Label({ text: rect.width+"px X "+rect.height+"px", style_class: "devtools-indented" }));
         this.contentBox.add_actor(new St.Label({ text: "Position", style_class: "devtools-inspect-subtitle" }));
         this.contentBox.add_actor(new St.Label({ text: "x: "+rect.x+", y: "+rect.y, style_class: "devtools-indented" }));
-        
+    },
+    
+    generateAppletContent: function() {
+        this.contentBox.add_actor(new St.Label({ text: "UUID", style_class: "devtools-inspect-subtitle" }));
+        this.contentBox.add_actor(new St.Label({ text: this.target._uuid, style_class: "devtools-indented" }));
+    },
+    
+    generateDeskletContent: function() {
+        this.contentBox.add_actor(new St.Label({ text: "UUID", style_class: "devtools-inspect-subtitle" }));
+        this.contentBox.add_actor(new St.Label({ text: this.target._uuid, style_class: "devtools-indented" }));
     },
     
     generateObjectContent: function() {
