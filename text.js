@@ -6,6 +6,7 @@ const St = imports.gi.St;
 const Main = imports.ui.main;
 const Params = imports.misc.params;
 const Lang = imports.lang;
+const Mainloop = imports.mainloop;
 
 
 function TextAllocator() {
@@ -14,39 +15,15 @@ function TextAllocator() {
 
 TextAllocator.prototype = {
     _init: function(textObj, params) {
-        params = Params.parse (params, { text: "",
+        this.params = Params.parse (params, { text: "",
                                          style_class: "multiline-text",
+                                         style: null,
                                          height: null,
                                          width: null,
                                          lines: null });
         
         this.textObj = textObj;
         this.outerWidth = 0;
-        
-        let props = { style_class: params.style_class };
-        
-        if ( params.height ) {
-            this.height = params.height;
-            props.height = params.height;
-            this.heightSet = true;
-        }
-        
-        else if ( params.lines ) {
-            this.height = params.lines * 12;
-            props.style = "height: " + params.lines + "em;";
-            this.heightSet = true;
-        }
-        else {
-            this.heightSet = false;
-        }
-        
-        if ( params.width ) {
-            this.width = params.width;
-            this.widthSet = true;
-        }
-        else {
-            this.widthSet = false;
-        }
         
         this.actor = new St.Bin({ reactive: true, track_hover: true, x_expand: !this.widthSet, x_fill: !this.widthSet, x_align: St.Align.START, y_expand: !this.heightSet, y_fill: !this.heightSet, y_align: St.Align.START });
         this.actor._delegate = this;
@@ -57,7 +34,7 @@ TextAllocator.prototype = {
         this._outerWrapper.connect("get-preferred-height", Lang.bind(this, this.getPreferedOuterHeight));
         this._outerWrapper.connect("get-preferred-width", Lang.bind(this, this.getPreferedOuterWidth));
         
-        this.scroll = new St.ScrollView(props);
+        this.scroll = new St.ScrollView({style_class: this.params.style_class, style: this.params.style});
         this._outerWrapper.add_actor(this.scroll);
         this.scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
         this.scroll._delegate = this;
@@ -65,7 +42,7 @@ TextAllocator.prototype = {
         this.scrolledContent = new St.BoxLayout();
         this.scroll.add_actor(this.scrolledContent);
         
-        this._innerWrapper = new Cinnamon.GenericContainer();
+        this._innerWrapper = new Cinnamon.GenericContainer({style_class:"test"});
         this.scrolledContent.add_actor(this._innerWrapper);
         this._innerWrapper.add_actor(textObj);
         
@@ -76,20 +53,14 @@ TextAllocator.prototype = {
         this.text.line_wrap = true;
         this.text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
         this.text.set_selectable(true);
-        textObj.text = params.text;
+        textObj.text = this.params.text;
         
         this._innerWrapper.connect("allocate", Lang.bind(this, this.allocateInner));
         this._innerWrapper.connect("get-preferred-height", Lang.bind(this, this.getPreferedInnerHeight));
         this._innerWrapper.connect("get-preferred-width", Lang.bind(this, this.getPreferedInnerWidth));
-        
-        this.actor.connect("style-changed", Lang.bind(this, function() {
-            let fontHeight = this.textObj.get_theme_node().lookup_length("font-size", true);
-//global.logWarning(String(fontHeight));
-        }));
     },
     
     allocateOuter: function(actor, box, flags) {
-//if (this.entry) global.logWarning(String(box.y1)+", "+box.y2);
         this.outerWidth = box.x2 - box.x1;
         this.outerHeight = box.y2 - box.y1;
         
@@ -103,25 +74,26 @@ TextAllocator.prototype = {
     },
     
     getPreferedOuterHeight: function(actor, forWidth, alloc) {
-        if ( this.heightSet ) {
-            alloc.min_size = this.height;
-            alloc.natural_size = this.height;
-        }
+        let height;
+        let lineHeight = this.text.get_layout().get_line(0).get_pixel_extents()[1].height;
+        if ( this.params.height ) height = this.params.height;
         else {
-            alloc.min_size = 24;
-            alloc.natural_size = 24;
+            if ( this.params.lines ) {
+                height = lineHeight * this.params.lines;
+            }
+            else {
+                height = lineHeight * 2;
+            }
+            height = this.scroll.get_theme_node().adjust_preferred_height(height, height)[1];
         }
+        alloc.min_size = alloc.natural_size = height;
     },
     
     getPreferedOuterWidth: function(actor, forHeight, alloc) {
-        if ( this.widthSet ) {
-            alloc.min_size = this.width;
-            alloc.natural_size = this.width;
-        }
-        else {
-            alloc.min_size = 50;
-            alloc.natural_size = 50;
-        }
+        let width;
+        if ( this.params.width ) width = this.params.width;
+        else width = 50;
+        alloc.min_size = alloc.natural_size = width;
     },
     
     allocateInner: function(actor, box, flags) {
@@ -233,18 +205,29 @@ Entry.prototype = {
         
         if ( textHeight <= scrollHeight ) return;
         
+        let lineHeight = this.text.get_layout().get_line(0).get_pixel_extents()[1].height;
         let adjustment = this.scrolledContent.vadjustment;
-        let cursorY = geometry.y;
-        let startY = adjustment.value;
-        let endY = scrollHeight + startY;
+        let adj = adjustment.value;
         
-        if ( cursorY < startY + geometry.height*2 ) {
-            let desiredPosition = cursorY - geometry.height*2;
-            adjustment.set_value(( desiredPosition > 0 ? desiredPosition : 0 ));
+        let line = Math.floor(geometry.y/lineHeight);
+        let cursorPos = line * lineHeight;
+        let topLine = Math.floor(adj/lineHeight);
+        let bottomLine = Math.floor((scrollHeight+adj)/lineHeight);
+        
+        if (cursorPos < adj) {
+            this.newCursorPosition = cursorPos;
         }
-        else if ( cursorY > endY - geometry.height*3 ) {
-            let desiredPosition = cursorY + geometry.height*3;
-            adjustment.set_value(( desiredPosition < textHeight ? desiredPosition : textHeight ) - scrollHeight);
+        else if (cursorPos+lineHeight > adj+scrollHeight) {
+            this.newCursorPosition = cursorPos+lineHeight-scrollHeight;
         }
+        else return;
+        
+        //For some reason setting the adjustment within
+        //this function causes the update to get 'stuck'
+        //until something else causes to to trigger such as
+        //setting the value again.
+        Mainloop.idle_add(Lang.bind(this, function() {
+            adjustment.set_value(this.newCursorPosition);
+        }));
     }
 }

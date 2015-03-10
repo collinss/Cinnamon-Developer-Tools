@@ -55,7 +55,7 @@ TextEditor.prototype = {
             saveasFileButton.connect("clicked", Lang.bind(this, this.getSaveFile));
             new Tooltips.Tooltip(saveasFileButton, _("Save As"));
             
-            let textArea = new Text.Entry({ style_class: "devtools-sandbox-entryText" });
+            let textArea = new Text.Entry({ lines: 20, style_class: "devtools-sandbox-entryText" });
             content.add(textArea.actor, { expand: true });
             this.text = textArea.text;
             
@@ -127,8 +127,8 @@ SandboxInterface.prototype = {
             
             let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
             this.panel.add_actor(tabs);
-            let tabPanels = new St.BoxLayout({ height: 120, style_class: "devtools-sandbox-tabPanels" });
-            this.panel.add(tabPanels, { expand: true });
+            let tabPanels = new St.BoxLayout({ style_class: "devtools-sandbox-tabPanels" });
+            this.panel.add_actor(tabPanels);
             this.tabManager = new Tab.TabManager(tabs, tabPanels);
             
             /*javascript*/
