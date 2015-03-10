@@ -128,7 +128,7 @@ TextAllocator.prototype = {
     getInnerWidth: function() {
         let sNode = this.scroll.get_theme_node();
         let width = sNode.adjust_for_width(this.outerWidth);
-        if ( this.text.get_preferred_height(width) > sNode.adjust_for_height(this._outerWrapper.height) ) width -= this.scroll.vscroll.width;
+        if ( this.scroll.vscrollbar_visible ) width -= this.scroll.vscroll.width;
         return width;
     }
 }
