@@ -43,7 +43,7 @@ XSessionLogInterface.prototype = {
         let bottomBox = new St.BoxLayout({ style_class: "devtools-log-bottomBox" });
         this.panel.add_actor(bottomBox);
         
-        this.hideOld = new CheckBox.CheckBox("Hide old errors", { style_class: "check-box devtools-checkBox" });
+        this.hideOld = new CheckBox.CheckBox("Hide old errors", { style_class: "devtools-checkBox" });
         bottomBox.add_actor(this.hideOld.actor);
         this.hideOld.actor.checked = this.settings.getValue("xsessionHideOld");
         this.hideOld.actor.connect("clicked", Lang.bind(this, function() {
@@ -129,7 +129,7 @@ CinnamonLogInterface.prototype = {
         let bottomBox = new St.BoxLayout({ style_class: "devtools-log-bottomBox" });
         this.panel.add_actor(bottomBox);
         
-        this.showTimestamp = new CheckBox.CheckBox("Show Timestamp", { style_class: "check-box devtools-checkBox" });
+        this.showTimestamp = new CheckBox.CheckBox("Show Timestamp", { style_class: "devtools-checkBox" });
         bottomBox.add_actor(this.showTimestamp.actor);
         this.showTimestamp.actor.checked = this.settings.getValue("clTimestamp");
         this.showTimestamp.actor.connect("clicked", Lang.bind(this, function() {
@@ -137,7 +137,7 @@ CinnamonLogInterface.prototype = {
             this.getText();
         }));
         
-        this.infos = new CheckBox.CheckBox("Infos", { style_class: "check-box devtools-checkBox" });
+        this.infos = new CheckBox.CheckBox("Infos", { style_class: "devtools-checkBox" });
         bottomBox.add_actor(this.infos.actor);
         this.infos.actor.checked = this.settings.getValue("clShowInfos");
         this.infos.actor.connect("clicked", Lang.bind(this, function() {
@@ -145,7 +145,7 @@ CinnamonLogInterface.prototype = {
             this.getText();
         }));
         
-        this.warnings = new CheckBox.CheckBox("Warnings", { style_class: "check-box devtools-checkBox" });
+        this.warnings = new CheckBox.CheckBox("Warnings", { style_class: "devtools-checkBox" });
         bottomBox.add_actor(this.warnings.actor);
         this.warnings.actor.checked = this.settings.getValue("clShowWarnings");
         this.warnings.actor.connect("clicked", Lang.bind(this, function() {
@@ -153,7 +153,7 @@ CinnamonLogInterface.prototype = {
             this.getText();
         }));
         
-        this.errors = new CheckBox.CheckBox("Errors", { style_class: "check-box devtools-checkBox" });
+        this.errors = new CheckBox.CheckBox("Errors", { style_class: "devtools-checkBox" });
         bottomBox.add_actor(this.errors.actor);
         this.errors.actor.checked = this.settings.getValue("clShowErrors");
         this.errors.actor.connect("clicked", Lang.bind(this, function() {
@@ -161,7 +161,7 @@ CinnamonLogInterface.prototype = {
             this.getText();
         }));
         
-        this.traces = new CheckBox.CheckBox("Traces", { style_class: "check-box devtools-checkBox" });
+        this.traces = new CheckBox.CheckBox("Traces", { style_class: "devtools-checkBox" });
         bottomBox.add_actor(this.traces.actor);
         this.traces.actor.checked = this.settings.getValue("clShowTraces");
         this.traces.actor.connect("clicked", Lang.bind(this, function() {

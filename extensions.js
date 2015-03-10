@@ -35,9 +35,12 @@ ExtensionItem.prototype = {
             let maxInstances = meta["max-instances"];
             this.isMultiInstance = maxInstances && maxInstances != 1;
             
-            this.actor = new St.BoxLayout({ style_class: "devtools-extension-container" });
+            this.actor = new St.BoxLayout({ style_class: "devtools-extensions-container" });
             
             /*icon*/
+            let iconBin = new St.Bin({ style_class: "devtools-extensions-icon" });
+            this.actor.add_actor(iconBin);
+            
             let icon;
             if ( meta.icon ) icon = new St.Icon({ icon_name: meta.icon, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
             else {
@@ -50,11 +53,13 @@ ExtensionItem.prototype = {
                     icon = new St.Icon({ icon_name: "cs-"+type.folder, icon_size: 48, icon_type: St.IconType.FULLCOLOR });
                 }
             }
-            this.actor.add_actor(icon);
+            iconBin.add_actor(icon);
             
             /*info*/
+            let infoBin = new St.Bin({ x_align: St.Align.START, x_expand: true, x_fill: true });
+            this.actor.add(infoBin, { expand: true });
             let infoBox = new St.BoxLayout({ vertical: true });
-            this.actor.add(infoBox, { expand: true });
+            infoBin.set_child(infoBox);
             infoBox.add_actor(new St.Label({ text: type.name, style_class: "devtools-extensions-title" }));
             
             let table = new St.Table({ homogeneous: false, clip_to_allocation: true });
@@ -77,7 +82,7 @@ ExtensionItem.prototype = {
             table.add(status, { row: 2, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
             /*extension options*/
-            let buttonBox = new St.BoxLayout({ vertical:true, style_class: "devtools-extension-buttonBox" });
+            let buttonBox = new St.BoxLayout({ vertical:true, style_class: "devtools-extensions-buttonBox" });
             this.actor.add_actor(buttonBox);
             
             //reload
@@ -102,7 +107,7 @@ ExtensionItem.prototype = {
                     let instance = this.instances[i];
                     let id = instance[type.name.toLowerCase()+"_id"];
                     
-                    let instanceBox = new St.BoxLayout({ style_class: "devtools-extension-instanceBox" });
+                    let instanceBox = new St.BoxLayout({ style_class: "devtools-extensions-instanceBox" });
                     instancesContainer.add_actor(instanceBox);
                     
                     instanceBox.add_actor(new St.Label({ text: "ID: "+id }));
@@ -227,7 +232,7 @@ ExtensionInterface.prototype = {
         let scrollBox = new St.ScrollView();
         this.panel.add(scrollBox, { expand: true });
         
-        this.extensionBox = new St.BoxLayout({ vertical: true, style_class: "devtools-extension-mainBox" });
+        this.extensionBox = new St.BoxLayout({ vertical: true, style_class: "devtools-extensions-mainBox" });
         scrollBox.add_actor(this.extensionBox);
         
         let bottomBox = new St.BoxLayout();
@@ -236,7 +241,7 @@ ExtensionInterface.prototype = {
         this.checkBoxes = {};
         for ( let key in Extension.Type ) {
             let type = Extension.Type[key];
-            let checkbox = new CheckBox.CheckBox("Show "+type.name+"s", { style_class: "check-box devtools-checkBox" });
+            let checkbox = new CheckBox.CheckBox("Show "+type.name+"s", { style_class: "devtools-checkBox" });
             this.checkBoxes[type.name] = checkbox;
             bottomBox.add_actor(checkbox.actor);
             checkbox.actor.checked = controller.settings.getValue("show"+type.name);

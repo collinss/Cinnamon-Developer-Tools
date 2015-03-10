@@ -50,8 +50,10 @@ WindowItem.prototype = {
             iconBin.set_child(icon);
             
             /*info*/
+            let infoBin = new St.Bin({ x_align: St.Align.START, x_expand: true, x_fill: true });
+            this.actor.add(infoBin, { expand: true });
             let infoBox = new St.BoxLayout({ vertical: true });
-            this.actor.add(infoBox, { expand: true });
+            infoBin.set_child(infoBox);
             let table = new St.Table({ homogeneous: false, clip_to_allocation: true });
             infoBox.add(table, { y_align: St.Align.MIDDLE, y_expand: false });
             

@@ -15,7 +15,7 @@
 }
 
 .devtools-button:hover {
-    background-color: #ffffff;
+    background-color: #efefef;
     border-radius: 5px;
 }
 
@@ -24,29 +24,32 @@
 }
 
 .devtools-contentButton {
-    color: red;
+    text-decoration: underline;
+    padding: 3px;
+    border-radius: 5px;
 }
 
 .devtools-contentButton:hover {
-    background-color: #ffffff;
-    border-radius: 5px;
-    /*color: cyan;*/
+    background-color: #efefef;
 }
 
-.devtools-separator {
-    /*uncomment these lines to make separators disappear*/
-    /*-gradient-height: 0px;*/
-    /*-margin-horizontal: 0px;*/
-    /*height: 0px;*/
+.devtools-checkBox StBin {
+    width: 16px;
+    height: 16px;
+    padding: 3px;
+    background-image: url("buttons/checkbox-unchecked.svg");
 }
 
-.devtools-checkBox {
-    /*min-width: 125px;*/
+.devtools-checkBox:focus StBin {
+    background-image: url("buttons/checkbox-unchecked.svg");
 }
 
-.multiline-text {
-    /*background-color: white;*/
-    /*color: black;*/
+.devtools-checkBox:checked StBin {
+    background-image: url("buttons/checkbox-checked.svg");
+}
+
+.devtools-checkBox:focus:checked StBin {
+    background-image: url("buttons/checkbox-checked.svg");
 }
 
 /*tab*/
@@ -58,12 +61,11 @@
 }
 
 .devtools-tab:hover {
-    background-color: white;
+    background-color: #efefef;
 }
 
 .devtools-tab:selected {
-    /*font-weight: bolder;*/
-    color: red;
+    background-color: #99eeaa;
 }
 
 .devtools-tabPanels {
@@ -88,27 +90,37 @@
 }
 
 /*terminal*/
-.devtools-terminal-entry {
-    background-color: #ffffff;
-    color: #000000;
-}
-
-.devtools-terminal-processMainBox {
-    
-}
-
-.devtools-terminal-processBox {
-    
-}
-
-/*extensions*/
-.devtools-extension-mainBox {
+.devtools-terminal-mainBox {
     spacing: 5px;
     padding: 5px;
 }
 
-.devtools-extension-container {
-    border: solid 1px black;
+.devtools-terminal-entry {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 2px 4px 2px 4px;
+    font: 14px courier, monospace;
+}
+
+.devtools-terminal-processesBox {
+    spacing: 5px;
+    padding: 5px;
+}
+
+.devtools-terminal-processBox {
+    border: solid 1px #555555;
+    border-radius: 5px;
+    padding: 3px;
+}
+
+/*extensions*/
+.devtools-extensions-mainBox {
+    spacing: 5px;
+    padding: 5px;
+}
+
+.devtools-extensions-container {
+    border: solid 1px #555555;
     border-radius: 5px;
     padding: 3px;
 }
@@ -117,11 +129,15 @@
     font-weight: bold;
 }
 
-.devtools-extension-buttonBox {
-    padding: 3px;
+.devtools-extensions-icon {
+    padding: 0px 8px 0px 4px;
 }
 
-.devtools-extension-instanceBox {
+.devtools-extensions-buttonBox {
+    padding: 3px 3px 3px 8px;
+}
+
+.devtools-extensions-instanceBox {
     spacing: 20px;
 }
 
@@ -132,21 +148,23 @@
 }
 
 .devtools-windows-windowBox {
-    border: solid 1px black;
+    border: solid 1px #555555;
     border-radius: 5px;
     padding: 3px;
 }
 
 .devtools-windows-icon {
-    
+    padding: 0px 8px 0px 4px;
 }
 
 .devtools-windows-buttonBox {
-    padding: 3px;
+    padding: 3px 3px 3px 8px;
 }
 
 /*sandbox*/
 .devtools-sandbox-entryText {
+    border: solid 1px #555555;
+    border-radius: 5px;
     background-color: #ffffff;
     padding: 5px;
     font: 14px courier, monospace;
@@ -154,17 +172,64 @@
     selected-color: white;
 }
 
+.devtools-sandbox-entryText StScrollBar {
+    min-width: 10px;
+}
+
+.devtools-sandbox-entryText StBin#trough {
+    background-color: transparent;
+}
+
+.devtools-sandbox-entryText StButton#vhandle {
+    background-color: #919191;
+    border-radius: 5px;
+}
+
+.devtools-sandbox-entryText StButton#vhandle:hover {
+    background-color: #B7B7B7;
+}
+
 .devtools-sandbox-buttonBox {
-    spacing: 10px;
+    spacing: 5px;
+    padding-right: 5px;
+}
+
+.devtools-sandbox-button {
+    padding: 3px;
+    border: solid 1px #555555;
+    border-radius: 5px;
+}
+
+.devtools-sandbox-button:hover {
+    background-color: #efefef;
 }
 
 .devtools-sandbox-previewer {
     padding: 10px;
-    border: solid 1px gold;
+    border: solid 1px #555555;
 }
 
 .devtools-sandbox-tabs {
-    spacing: 10px;
+    spacing: 15px;
+    padding: 5px;
+}
+
+.devtools-sandbox-tab {
+    border: solid 1px #555555;
+    border-radius: 4px;
+    padding: 3px 10px;
+}
+
+.devtools-sandbox-tab:hover {
+    background-color: #efefef;
+}
+
+.devtools-sandbox-tab:selected {
+    background-color: #99eeaa;
+}
+
+.devtools-sandbox-tab:hover:selected {
+    background-color: #bbffdd;
 }
 
 /*log*/

@@ -27,29 +27,29 @@ TextEditor.prototype = {
     
     _init: function(title) {
         try {
-            Tab.TabItemBase.prototype._init.call(this);
+            Tab.TabItemBase.prototype._init.call(this, { styleClass: "devtools-sandbox-tab" });
             
             this.setTabContent(new St.Label({ text: title }));
             let content = new St.BoxLayout({ style_class: "devtools-sandbox-box" });
             this.setContent(content);
             
             //buttons
-            this.buttonBox = new St.BoxLayout({ vertical: true });
+            this.buttonBox = new St.BoxLayout({ vertical: true, style_class: "devtools-sandbox-buttonBox" });
             content.add_actor(this.buttonBox);
             
-            let openFileButton = new St.Button();
+            let openFileButton = new St.Button({ style_class: "devtools-sandbox-button" });
             this.buttonBox.add_actor(openFileButton);
             openFileButton.add_actor(new St.Icon({ icon_name: "fileopen", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
             openFileButton.connect("clicked", Lang.bind(this, this.getOpenFile));
             new Tooltips.Tooltip(openFileButton, _("Open"));
             
-            let saveFileButton = new St.Button();
+            let saveFileButton = new St.Button({ style_class: "devtools-sandbox-button" });
             this.buttonBox.add_actor(saveFileButton);
             saveFileButton.add_actor(new St.Icon({ icon_name: "filesave", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
             saveFileButton.connect("clicked", Lang.bind(this, this.saveFile));
             new Tooltips.Tooltip(saveFileButton, _("Save"));
             
-            let saveasFileButton = new St.Button();
+            let saveasFileButton = new St.Button({ style_class: "devtools-sandbox-button" });
             this.buttonBox.add_actor(saveasFileButton);
             saveasFileButton.add_actor(new St.Icon({ icon_name: "filesaveas", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
             saveasFileButton.connect("clicked", Lang.bind(this, this.getSaveFile));
@@ -125,11 +125,17 @@ SandboxInterface.prototype = {
             
             TabPanel.TabPanelBase.prototype._init.call(this, true);
             
+            let topRow = new St.BoxLayout();
+            this.panel.add_actor(topRow);
             let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
-            this.panel.add_actor(tabs);
+            topRow.add(tabs, { expand: true });
             let tabPanels = new St.BoxLayout({ style_class: "devtools-sandbox-tabPanels" });
             this.panel.add_actor(tabPanels);
             this.tabManager = new Tab.TabManager(tabs, tabPanels);
+            
+            let evaluateButton = new St.Button({ label: "Evaluate", style_class: "devtools-contentButton" });
+            topRow.add_actor(evaluateButton);
+            evaluateButton.connect("clicked", Lang.bind(this, this.evaluate));
             
             /*javascript*/
             this.jsTab = new TextEditor("Javascript");
@@ -138,20 +144,13 @@ SandboxInterface.prototype = {
             /*style*/
             this.cssTab = new TextEditor("Style");
             this.tabManager.add(this.cssTab);
-            let loadCurrentButton = new St.Button();
+            let loadCurrentButton = new St.Button({ style_class: "devtools-sandbox-button" });
             this.cssTab.buttonBox.add_actor(loadCurrentButton);
             loadCurrentButton.add_actor(new St.Icon({ icon_name: "document-open", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
             loadCurrentButton.connect("clicked", Lang.bind(this, this.loadCurentStylesheet));
             new Tooltips.Tooltip(loadCurrentButton, _("Load currnet stylesheet"));
             
             this.tabManager.selectIndex(0);
-            
-            //button controls
-            let buttonBox = new St.BoxLayout({ style_class: "devtools-sandbox-buttonBox" });
-            this.panel.add_actor(buttonBox);
-            let evaluateButton = new St.Button({ label: "Evaluate", style_class: "devtools-button" });
-            buttonBox.add_actor(evaluateButton);
-            evaluateButton.connect("clicked", Lang.bind(this, this.evaluate));
             
             //sandbox preview
             this.previewer = new St.Bin({ x_expand: true, y_expand: true, x_fill: true, y_fill: true, style_class: "devtools-sandbox-previewer" });

@@ -119,12 +119,12 @@ Terminal.prototype = {
         this.processes = [];
         this.workingDirectory = GLib.get_home_dir();
         
-        this.actor = new St.BoxLayout({ vertical: true });
+        this.actor = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-mainBox" });
         
         let inputBox = new St.BoxLayout({ style_class: "devtools-terminal-entry" });
         this.actor.add_actor(inputBox);
         
-        this.prompt = new St.Label({ text: this.workingDirectory+" #"});
+        this.prompt = new St.Label({ text: this.workingDirectory+"# "});
         inputBox.add_actor(this.prompt);
         
         this.input = new St.Entry({ track_hover: false, can_focus: true });
@@ -134,7 +134,7 @@ Terminal.prototype = {
         let scrollBox = new St.ScrollView();
         this.actor.add_actor(scrollBox);
         
-        this.output = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processMainBox" });
+        this.output = new St.BoxLayout({ vertical: true, style_class: "devtools-terminal-processesBox" });
         scrollBox.add_actor(this.output);
         
         this.input.clutter_text.connect("button_press_event", Lang.bind(this, this.enter));
@@ -179,13 +179,6 @@ Terminal.prototype = {
             } catch(e) {
                 Main.notify("Error while trying to run \"" + input + "\"", e.message);
                 return;
-            }
-            
-            if ( this.output.get_children().length > 0 ) {
-                let separator = new PopupMenu.PopupSeparatorMenuItem();
-                this.output.add_actor(separator.actor);
-                separator.actor.remove_style_class_name("popup-menu-item");
-                separator._drawingArea.add_style_class_name("devtools-separator");
             }
             
             let command = new CommandItem(input, pId, inId, outId, errId);
