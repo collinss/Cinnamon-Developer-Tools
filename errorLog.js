@@ -34,20 +34,11 @@ XSessionLogInterface.prototype = {
         this.settings = settings;
         this.start = 0;
         
-        this.scrollBox = new St.ScrollView();
-        
         //content text
-        this.contentText = new St.Label();
-        this.contentText.set_clip_to_allocation(false);
-        this.contentText.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-        this.contentText.clutter_text.line_wrap = true;
-        let textBox = new St.BoxLayout();
-        textBox.add_actor(this.contentText);
-        this.scrollBox.add_actor(textBox);
-        this.panel.add_actor(this.scrollBox);
-        
-        let paddingBox = new St.Bin();
-        this.panel.add(paddingBox, { expand: true });
+        this.text = new Text.Label();
+        this.panel.add(this.text.actor, { expand: true });
+        this.contentText = this.text.label;
+        this.scrollBox = this.text.scroll;
         
         let bottomBox = new St.BoxLayout({ style_class: "devtools-log-bottomBox" });
         this.panel.add_actor(bottomBox);
