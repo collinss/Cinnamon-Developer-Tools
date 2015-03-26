@@ -251,11 +251,15 @@ ExtensionInterface.prototype = {
             }));
             
             type.connect("extension-loaded", Lang.bind(this, this.reload));
-            type.connect("extension-unloaded", Lang.bind(this, this.reload));
+            type.connect("extension-unloaded", Lang.bind(this, this.queueReload));
         }
     },
     
-    reload: function(a, uuid) {
+    queueReload: function() {
+        Mainloop.idle_add(Lang.bind(this, this.reload));
+    },
+    
+    reload: function() {
         try {
             if ( !this.selected ) return;
             this.extensionBox.destroy_all_children();
