@@ -345,6 +345,8 @@ InspectInterface.prototype = {
         this.contentBox.add_actor(new St.Label({ text: this.target.height+" px", style_class: "devtools-indented" }));
         this.contentBox.add_actor(new St.Label({ text: "Width", style_class: "devtools-inspect-subtitle" }));
         this.contentBox.add_actor(new St.Label({ text: this.target.width+" px", style_class: "devtools-indented" }));
+        this.contentBox.add_actor(new St.Label({ text: "Visible", style_class: "devtools-inspect-subtitle" }));
+        this.contentBox.add_actor(new St.Label({ text: String(this.target.visible).capitalize(), style_class: "devtools-indented" }));
         
         if ( this.target instanceof St.Widget ) {
             this.contentBox.add_actor(new St.Label({ text: "Style Class", style_class: "devtools-inspect-subtitle" }));
