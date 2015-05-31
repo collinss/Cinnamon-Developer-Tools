@@ -4,7 +4,6 @@ const Tooltips = imports.ui.tooltips;
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
@@ -88,7 +87,7 @@ TextEditor.prototype = {
     
     getSaveFile: function() {
         let path;
-        let args = ["python", DESKLET_PATH+"/file.py", "1"];
+        let args = ["python", DESKLET_PATH+"/file.py", "2"];
         if ( this.file ) args.push(this.file.get_path());
         Util.spawn_async(args, Lang.bind(this, this.saveToFile));
     },
@@ -127,8 +126,8 @@ SandboxInterface.prototype = {
             
             let topRow = new St.BoxLayout();
             this.panel.add_actor(topRow);
-            let tabs = new St.BoxLayout({ style_class: "devtools-sandbox-tabs" });
-            topRow.add(tabs, { expand: true });
+            let tabs = new Tab.TabBoxBase({ styleClass: "devtools-sandbox-tabs" });
+            topRow.add(tabs.actor, { expand: true });
             let tabPanels = new St.BoxLayout({ style_class: "devtools-sandbox-tabPanels" });
             this.panel.add_actor(tabPanels);
             this.tabManager = new Tab.TabManager(tabs, tabPanels);

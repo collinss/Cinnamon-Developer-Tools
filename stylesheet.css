@@ -72,7 +72,7 @@
     
 }
 
-.devtools-tabBox {
+.devtools-tabScroll StBoxLayout {
     padding: 3px;
     spacing: 6px;
 }

@@ -1,8 +1,10 @@
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
+const Gtk = imports.gi.Gtk;
 const St = imports.gi.St;
-const Lang = imports.lang;
 const Params = imports.misc.params;
+const Lang = imports.lang;
+const Mainloop = imports.mainloop;
 const Signals = imports.signals;
 
 function TabManager(tabArea, contentArea) {
@@ -11,16 +13,22 @@ function TabManager(tabArea, contentArea) {
 
 TabManager.prototype = {
     _init: function(tabArea, contentArea) {
-        this.tabArea = tabArea;
+        if (tabArea) this.setTabContainer(tabArea);
         this.contentArea = contentArea;
         this.items = [];
         this.selectedIndex = -1;
     },
     
+    setTabContainer: function(tabArea) {
+        //to-do: add some handling for the case where it already has one
+        this.tabArea = tabArea;
+        
+    },
+    
     add: function(tab) {
         let info = { tabObject: tab };
         this.items.push(info);
-        this.tabArea.add_actor(tab.tab);
+        this.tabArea.addTab(tab.tab);
         this.contentArea.add(tab.content, { expand: true });
         
         info.selectId = tab.connect("select", Lang.bind(this, this.selectItem));
@@ -184,3 +192,112 @@ TabItemBase.prototype = {
     }
 }
 Signals.addSignalMethods(TabItemBase.prototype);
+
+function TabBoxBase() {
+    this._init.apply(this, arguments);
+}
+
+TabBoxBase.prototype = {
+    _init: function(params) {
+        this.params = Params.parse(params, {
+            styleClass: "tabBox",
+            vertical: false,
+        });
+        
+        this.isVertical = params.vertical;
+        
+        this.actor = new St.BoxLayout({style_class: this.params.styleClass, vertical: this.params.vertical});
+    },
+    
+    addTab: function(tabActor) {
+        this.actor.add_actor(tabActor);
+    },
+    
+    removeTab: function(tabActor) {
+        this.actor.remove_actor(tabActor);
+    }
+}
+
+function ScrolledTabBox() {
+    this._init.apply(this, arguments);
+}
+
+ScrolledTabBox.prototype = {
+    __proto__: TabBoxBase.prototype,
+    
+    _init: function(params) {
+        
+        TabBoxBase.prototype._init.call(this, params);
+        
+        this.backButton = new St.Button({label: "<", name:"navButton"});
+        this.actor.add_actor(this.backButton);
+        this.backButton.connect("clicked", Lang.bind(this, this.scrollBack));
+        
+        this.scrollBox = new St.ScrollView();
+        this.scrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER);
+        this.scrollBox.set_auto_scrolling(true);
+        this.actor.add(this.scrollBox, {expand: true});
+        this.adjustment = this.scrollBox.hscroll.adjustment;
+        
+        this.tabContainer = new St.BoxLayout({vertical: this.isVertical});
+        this.scrollBox.add_actor(this.tabContainer);
+        
+        this.forwardButton = new St.Button({label: ">", name:"navButton"});
+        this.actor.add_actor(this.forwardButton);
+        this.forwardButton.connect("clicked", Lang.bind(this, this.scrollForward));
+        
+        this.adjustment.connect("notify::value", Lang.bind(this, this.updateScrollbuttonVisibility));
+        this.updateScrollbuttonVisibility();
+    },
+    
+    addTab: function(tabActor) {
+        this.tabContainer.add_actor(tabActor);
+        if (!this.updateQueued) {
+            Mainloop.idle_add(Lang.bind(this, this.updateScrollbuttonVisibility));
+            this.updateQueued = true;
+        }
+    },
+    
+    removeTab: function(tabActor) {
+        this.tabContainer.remove_actor(tabActor);
+        this.updateScrollbuttonVisibility();
+    },
+    
+    scrollBack: function() {
+//global.logWarning("hello");
+        
+        this.updateScrollbuttonVisibility();
+    },
+    
+    scrollForward: function() {
+//global.logWarning("hello");
+        
+        this.updateScrollbuttonVisibility();
+    },
+    
+    updateScrollbuttonVisibility: function() {
+        this.updateQueued = false;
+        let width = this.tabContainer.get_preferred_width(0)[1];
+//global.logWarning("width: "+width);
+        if (width <= this.actor.width) {
+            this.forwardButton.hide();
+            this.backButton.hide();
+            return;
+        }
+        
+        this.forwardButton.show();
+        this.backButton.show();
+        
+//global.logWarning("adj: "+this.adjustment.value);
+        if (this.adjustment.value == 0) {
+            this.forwardButton.set_reactive(true);
+            this.backButton.set_reactive(false);
+        } else if (this.adjustment.value == width - this.scrollBox.width) {
+            this.forwardButton.set_reactive(false);
+            this.backButton.set_reactive(true);
+        } else {
+            this.forwardButton.set_reactive(true);
+            this.backButton.set_reactive(true);
+        }
+    }
+}

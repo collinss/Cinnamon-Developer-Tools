@@ -358,9 +358,6 @@ myDesklet.prototype = {
     
     buildLayout: function() {
         try {
-            
-            if ( this.mainBox ) this.mainBox.destroy();
-            
             this.mainBox = new St.BoxLayout({ vertical: true, style_class: "devtools-mainBox" });
             this.setContent(this.mainBox);
             
@@ -376,17 +373,12 @@ myDesklet.prototype = {
             this.panelBox = new St.BoxLayout({ vertical: true, style_class: "devtools-tabPanels" });
             this.contentArea.add(this.panelBox, { expand: true });
             
-            let scrollBox = new St.ScrollView({ style_class: "devtools-tabScroll" });
-            this.contentArea.add_actor(scrollBox);
-            scrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER);
-            scrollBox.set_auto_scrolling(true);
+            this.tabBox = new Tab.ScrolledTabBox({styleClass:"devtools-tabScroll", vertical: false});
+            this.contentArea.add_actor(this.tabBox.actor);
             
-            this.tabBox = new St.BoxLayout({ style_class: "devtools-tabBox", vertical: false });
-            scrollBox.add_actor(this.tabBox);
             this.tabManager = new Tab.TabManager(this.tabBox, this.panelBox);
             
             this.addDefaultTabs();
-            
         } catch(e) {
             global.logError(e);
         }
@@ -544,7 +536,7 @@ myDesklet.prototype = {
             name = "closed";
             this.collapseTooltip.set_text(_("Expand"));
             this.panelBox.hide();
-            this.tabBox.hide();
+            this.tabBox.actor.hide();
             Tweener.addTween(this.contentArea, {
                 time: .25,
                 width: 0,
@@ -553,7 +545,7 @@ myDesklet.prototype = {
                 onComplete: function() {
                     this.contentArea.hide();
                     this.panelBox.show();
-                    this.tabBox.show();
+                    this.tabBox.actor.show();
                 }
             });
         }
@@ -563,7 +555,7 @@ myDesklet.prototype = {
             this.contentArea.height = 0;
             this.contentArea.width = 0;
             this.panelBox.hide();
-            this.tabBox.hide();
+            this.tabBox.actor.hide();
             this.contentArea.show();
             Tweener.addTween(this.contentArea, {
                 time: .25,
@@ -576,7 +568,7 @@ myDesklet.prototype = {
                         onCompleteScope: this,
                         onComplete: function() {
                             this.panelBox.show();
-                            this.tabBox.show();
+                            this.tabBox.actor.show();
                         }
                     });
                 }
