@@ -15,7 +15,7 @@ const TabPanel = imports.tabPanel;
 const CollapseButton = imports.collapseButton;
 const Windows = imports.windows;
 
-const INSPECTABLE_TYPES = ["object","array","actor","window","applet","desklet"];
+const INSPECTABLE_TYPES = ["object","array","map","actor","window","applet","desklet"];
 
 
 let controller;
@@ -50,6 +50,7 @@ function getType(object) {
     let type = typeof(object);
     if ( type == "object" ) {
         if ( object === null ) type = "null";
+        else if ( object instanceof Map ) type = "map";
         else if ( object instanceof Array ) type = "array";
         else if ( object instanceof Clutter.Actor ) type = "actor";
         else if ( object instanceof Meta.Window ) type = "window";
@@ -317,7 +318,7 @@ InspectInterface.prototype = {
         this.contentBox.add_actor(new St.Label({ text: "Length", style_class: "devtools-inspect-subtitle" }));
         this.contentBox.add_actor(new St.Label({ text: String(this.target.length), style_class: "devtools-indented" }));
     },
-    
+
     generateActorContent: function() {
         //parent actor
         let parent = this.target.get_parent();
@@ -400,6 +401,10 @@ InspectInterface.prototype = {
             propText = "Values";
             itemText = "Index";
         }
+        else if ( this.type == "map" ) {
+            propText = "Map Elements";
+            itemText = "Key";
+        }
         else {
             propText = "Properties";
             itemText = "Name";
@@ -414,24 +419,32 @@ InspectInterface.prototype = {
         this.propertiesBox = new St.BoxLayout({ vertical: true, style_class: "devtools-indented" });
         this.contentBox.add_actor(this.propertiesBox);
         
-        let propertyLists = {};
-        for ( let prop in this.target ) {
-            let type = getType(this.target[prop]);
-            if ( propertyLists[type] == undefined ) propertyLists[type] = [];
-            propertyLists[type].push(prop);
+        if ( this.type == "map" ) {
+            for ( let [key, value] of this.target ) {
+                let type = getType(value);
+                this.createChildItem(type, key, value);
+            }
         }
-        
-        let propBox;
-        for ( let type in propertyLists ) {
-            let list = propertyLists[type];
-            list.sort();
-            for ( let i = 0; i < list.length; i++ ) {
-                this.createChildItem(type, list[i])
+        else {
+            let propertyLists = {};
+            for ( let prop in this.target ) {
+                let type = getType(this.target[prop]);
+                if ( propertyLists[type] == undefined ) propertyLists[type] = [];
+                propertyLists[type].push(prop);
+            }
+            
+            let propBox;
+            for ( let type in propertyLists ) {
+                let list = propertyLists[type];
+                list.sort();
+                for ( let i = 0; i < list.length; i++ ) {
+                    this.createChildItem(type, list[i], this.target[list[i]]);
+                }
             }
         }
     },
     
-    createChildItem: function(type, prop) {
+    createChildItem: function(type, prop, value) {
         let name = new St.Label({ text: prop, min_width: 150 });
         this.propertiesTable.add(name, { row: this.propRowIndex, col: 0 });
         
@@ -439,13 +452,13 @@ InspectInterface.prototype = {
         this.propertiesTable.add(typeLabel, { row: this.propRowIndex, col: 1 });
         
         let value;
-        let [longText, shortText] = this.getObjectText(this.target[prop],type);
+        let [longText, shortText] = this.getObjectText(value,type);
         if ( INSPECTABLE_TYPES.indexOf(type) == -1 ) {
             value = new St.Label({ text: shortText, reactive: true });
             new Tooltips.Tooltip(value, longText);
         }
         else {
-            value = new InspectButton(this.target[prop], shortText).actor;
+            value = new InspectButton(value, shortText).actor;
             new Tooltips.Tooltip(value, "Inspect "+longText);
         }
         this.propertiesTable.add(value, { row: this.propRowIndex, col: 2, x_expand: false, x_align: St.Align.START });
