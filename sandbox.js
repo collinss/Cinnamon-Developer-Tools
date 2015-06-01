@@ -8,13 +8,34 @@ const Gtk = imports.gi.Gtk;
 const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 const Lang = imports.lang;
-const Util = imports.misc.util;
+const FileDialog = imports.misc.fileDialog;
 
 const DESKLET_PATH = imports.ui.deskletManager.deskletMeta["devTools@scollins"].path 
 imports.searchPath.push(DESKLET_PATH);
 const Tab = imports.tab;
 const TabPanel = imports.tabPanel;
 const Text = imports.text;
+
+
+function getDefaultParams(path) {
+    let params = {};
+
+    if ( path ) params.path = path;
+    let jsFilter = new FileDialog.Filter("Javascript");
+    jsFilter.addMimeType("application/javascript");
+    jsFilter.addMimeType("text/javascript");
+    jsFilter.addPattern("*.js");
+
+    let textFilter = new FileDialog.Filter("Text");
+    textFilter.addMimeType("text/plain");
+
+    let anyFilter = new FileDialog.Filter("All Files");
+    anyFilter.addPattern("*");
+
+    params.filters = [jsFilter, textFilter, anyFilter];
+
+    return params;
+}
 
 
 function TextEditor(title) {
@@ -39,7 +60,7 @@ TextEditor.prototype = {
             let openFileButton = new St.Button({ style_class: "devtools-sandbox-button" });
             this.buttonBox.add_actor(openFileButton);
             openFileButton.add_actor(new St.Icon({ icon_name: "fileopen", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
-            openFileButton.connect("clicked", Lang.bind(this, this.getOpenFile));
+            openFileButton.connect("clicked", Lang.bind(this, this.getFileToOpen));
             new Tooltips.Tooltip(openFileButton, _("Open"));
             
             let saveFileButton = new St.Button({ style_class: "devtools-sandbox-button" });
@@ -51,7 +72,7 @@ TextEditor.prototype = {
             let saveasFileButton = new St.Button({ style_class: "devtools-sandbox-button" });
             this.buttonBox.add_actor(saveasFileButton);
             saveasFileButton.add_actor(new St.Icon({ icon_name: "filesaveas", icon_size: 24, icon_type: St.IconType.FULLCOLOR }));
-            saveasFileButton.connect("clicked", Lang.bind(this, this.getSaveFile));
+            saveasFileButton.connect("clicked", Lang.bind(this, this.getFileToSave));
             new Tooltips.Tooltip(saveasFileButton, _("Save As"));
             
             let textArea = new Text.Entry({ lines: 20, style_class: "devtools-sandbox-entryText" });
@@ -76,20 +97,17 @@ TextEditor.prototype = {
         if ( !fullscreen ) global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
     },
     
-    getOpenFile: function() {
-        Util.spawn_async(["python", DESKLET_PATH+"/file.py", "0"], Lang.bind(this, this.loadFromFile));
+    getFileToOpen: function() {
+        FileDialog.open(Lang.bind(this, this.loadFromFile), getDefaultParams((this.file) ? this.file.get_path() : null));
     },
     
     saveFile: function() {
         if ( this.file ) this.saveToFile(this.file.get_path());
-        else this.getSaveFile();
+        else this.getFileToSave();
     },
     
-    getSaveFile: function() {
-        let path;
-        let args = ["python", DESKLET_PATH+"/file.py", "2"];
-        if ( this.file ) args.push(this.file.get_path());
-        Util.spawn_async(args, Lang.bind(this, this.saveToFile));
+    getFileToSave: function() {
+        FileDialog.save(Lang.bind(this, this.saveToFile), getDefaultParams((this.file) ? this.file.get_path() : null));
     },
     
     loadFromFile: function(path) {
