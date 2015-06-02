@@ -72,7 +72,7 @@ TabManager.prototype = {
     },
     
     remove: function(tab) {
-        this.tabArea.remove_actor(tab.tab);
+        this.tabArea.removeTab(tab.tab);
         this.contentArea.remove_actor(tab.content);
         
         let info = this.items[this.getIndexForItem(tab)];
