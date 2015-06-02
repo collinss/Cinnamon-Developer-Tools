@@ -266,6 +266,40 @@ InspectButton.prototype = {
 }
 
 
+function ActorButton(actor) {
+    this._init(actor);
+}
+
+ActorButton.prototype = {
+    _init: function(actor) {
+        this.target = actor;
+
+        this.actor = new St.BoxLayout();
+        this.inspect = new InspectButton(actor, String(this.actor));
+        this.actor.add_actor(this.inspect.actor);
+        this.inspect.actor.connect("enter-event", Lang.bind(this, this.onEnterEvent));
+        this.inspect.actor.connect("leave-event", Lang.bind(this, this.onLeaveEvent));
+
+        this.marker = new St.Bin({ style: "background-color: rgba(100,100,100,.25);" });
+        this.marker.hide();
+        Main.uiGroup.add_actor(this.marker);
+    },
+
+    onEnterEvent: function() {
+        let [x, y] = this.target.get_transformed_position();
+        this.marker.set_position(x, y);
+        let [width, height] = this.target.get_size();
+        this.marker.set_size(width, height);
+        this.marker.raise_top();
+        this.marker.show();
+    },
+
+    onLeaveEvent: function() {
+        this.marker.hide();
+    }
+}
+
+
 function InspectInterface(target, controllerObj) {
     this._init(target, controllerObj);
 }
@@ -325,7 +359,7 @@ InspectInterface.prototype = {
         this.contentBox.add_actor(new St.Label({ text: "Parent", style_class: "devtools-inspect-subtitle" }));
         let parentBox = new St.BoxLayout({ style_class: "devtools-indented" });
         this.contentBox.add_actor(parentBox);
-        if ( parent ) parentBox.add_actor(new InspectButton(parent).actor);
+        if ( parent ) parentBox.add_actor(new ActorButton(parent).actor);
         else parentBox.add_actor(new St.Label({ text: "none" }));
         
         //child actors
@@ -336,7 +370,7 @@ InspectInterface.prototype = {
             let childrenBox = new St.BoxLayout({ vertical: true, style_class: "devtools-indented" });
             this.contentBox.add_actor(childrenBox);
             for ( let i = 0; i < children.length; i++ ) {
-                childrenBox.add_actor(new InspectButton(children[i]).actor);
+                childrenBox.add_actor(new ActorButton(children[i]).actor);
             }
         }
         else this.contentBox.add_actor(new St.Label({ text: "none", style_class: "devtools-indented" }));
