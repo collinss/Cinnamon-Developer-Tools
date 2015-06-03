@@ -266,25 +266,39 @@ InspectButton.prototype = {
 }
 
 
-function ActorButton(actor) {
-    this._init(actor);
+function ActorButton(actor, isParent) {
+    this._init(actor, isParent);
 }
 
 ActorButton.prototype = {
-    _init: function(actor) {
+    _init: function(actor, isParent) {
         this.target = actor;
-
-        this.actor = new St.BoxLayout();
+        this.isParent = isParent;
+        
+        this.actor = new St.BoxLayout({ vertical: true });
+        let topBox = new St.BoxLayout();
+        this.actor.add_actor(topBox);
+        this.childBox = new St.BoxLayout({ vertical: true, style_class: "devtools-indented" });
+        this.actor.add_actor(this.childBox);
+        
         this.inspect = new InspectButton(actor, String(this.actor));
-        this.actor.add_actor(this.inspect.actor);
+        topBox.add_actor(this.inspect.actor);
+        
+        if ( (isParent && this.target.get_parent()) || (!isParent && this.target.get_children().length > 0) ) {
+            let showMoreButton = new St.Button();
+            topBox.add_actor(showMoreButton);
+            showMoreButton.add_actor(new St.Icon({ icon_name: "closed", icon_type: St.IconType.SYMBOLIC, icon_size: 8 }));
+            showMoreButton.connect("clicked", Lang.bind(this, this.showMore));
+        }
+        
         this.inspect.actor.connect("enter-event", Lang.bind(this, this.onEnterEvent));
         this.inspect.actor.connect("leave-event", Lang.bind(this, this.onLeaveEvent));
-
+        
         this.marker = new St.Bin({ style: "background-color: rgba(100,100,100,.25);" });
         this.marker.hide();
         Main.uiGroup.add_actor(this.marker);
     },
-
+    
     onEnterEvent: function() {
         let [x, y] = this.target.get_transformed_position();
         this.marker.set_position(x, y);
@@ -293,9 +307,21 @@ ActorButton.prototype = {
         this.marker.raise_top();
         this.marker.show();
     },
-
+    
     onLeaveEvent: function() {
         this.marker.hide();
+    },
+    
+    showMore: function() {
+        // todo: make sure we only have one set showing here at a time and don't try to show if it already is
+        if ( this.isParent ) {
+            this.childBox.add_actor(new ActorButton(this.target.get_parent(), true).actor); 
+        }
+        else {
+            for ( let child of this.target.get_children()) {
+                this.childBox.add_actor(new ActorButton(child, false).actor);
+            }
+        }
     }
 }
 
@@ -359,7 +385,7 @@ InspectInterface.prototype = {
         this.contentBox.add_actor(new St.Label({ text: "Parent", style_class: "devtools-inspect-subtitle" }));
         let parentBox = new St.BoxLayout({ style_class: "devtools-indented" });
         this.contentBox.add_actor(parentBox);
-        if ( parent ) parentBox.add_actor(new ActorButton(parent).actor);
+        if ( parent ) parentBox.add_actor(new ActorButton(parent, true).actor);
         else parentBox.add_actor(new St.Label({ text: "none" }));
         
         //child actors
@@ -369,8 +395,8 @@ InspectInterface.prototype = {
         if ( children.length > 0 ) {
             let childrenBox = new St.BoxLayout({ vertical: true, style_class: "devtools-indented" });
             this.contentBox.add_actor(childrenBox);
-            for ( let i = 0; i < children.length; i++ ) {
-                childrenBox.add_actor(new ActorButton(children[i]).actor);
+            for ( let child of children ) {
+                childrenBox.add_actor(new ActorButton(child, false).actor);
             }
         }
         else this.contentBox.add_actor(new St.Label({ text: "none", style_class: "devtools-indented" }));
