@@ -255,7 +255,8 @@ ScrolledTabBox.prototype = {
         scrollButtonBox.add_actor(this.forwardButton);
         this.forwardButton.connect("clicked", Lang.bind(this, this.scrollForward));
         
-        this.scrollBox.connect("scroll-event", Lang.bind(this, this.updateScrollbuttonVisibility));
+        this.adjustment.connect("changed", Lang.bind(this, this.updateScrollbuttonVisibility));
+        this.adjustment.connect("notify::value", Lang.bind(this, this.updateScrollbuttonVisibility));
         this.updateScrollbuttonVisibility();
     },
     
@@ -273,32 +274,29 @@ ScrolledTabBox.prototype = {
     },
     
     scrollBack: function() {
-//global.logWarning("hello");
         
         this.updateScrollbuttonVisibility();
     },
     
     scrollForward: function() {
-//global.logWarning("hello");
         
         this.updateScrollbuttonVisibility();
     },
     
     updateScrollbuttonVisibility: function() {
         this.updateQueued = false;
-        let width = this.tabContainer.get_preferred_width(0)[1];
-//global.logWarning("width: "+width);
-        if (width <= this.actor.width) {
+        let innerWidth = this.tabContainer.get_preferred_width(this.tabContainer.height)[1];
+        let scrollWidth = this.scrollBox.allocation.get_width();
+        if (innerWidth <= scrollWidth) {
             this.forwardButton.hide();
             this.backButton.hide();
             return;
         }
         
-// global.logWarning("adj: "+this.adjustment.value);
         if ( this.adjustment.value <= 0 ) this.backButton.hide();
         else this.backButton.show();
         
-        if (this.adjustment.value >= width - this.scrollBox.width) this.forwardButton.hide();
+        if (this.adjustment.value >= innerWidth - scrollWidth) this.forwardButton.hide();
         else this.forwardButton.show();
     }
 }
