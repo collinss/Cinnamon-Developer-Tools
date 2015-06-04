@@ -274,13 +274,11 @@ ScrolledTabBox.prototype = {
     },
     
     scrollBack: function() {
-        
-        this.updateScrollbuttonVisibility();
+        this.adjustment.set_value(this.adjustment.value - this.adjustment.step_increment);
     },
     
     scrollForward: function() {
-        
-        this.updateScrollbuttonVisibility();
+        this.adjustment.set_value(this.adjustment.value + this.adjustment.step_increment);
     },
     
     updateScrollbuttonVisibility: function() {
