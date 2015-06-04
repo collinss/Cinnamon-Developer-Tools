@@ -1,5 +1,6 @@
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
+const Cinnamon = imports.gi.Cinnamon;
 const Gtk = imports.gi.Gtk;
 const St = imports.gi.St;
 const Params = imports.misc.params;
@@ -229,24 +230,32 @@ ScrolledTabBox.prototype = {
         
         TabBoxBase.prototype._init.call(this, params);
         
-        this.backButton = new St.Button({label: "<", name:"navButton"});
-        this.actor.add_actor(this.backButton);
-        this.backButton.connect("clicked", Lang.bind(this, this.scrollBack));
+        let stack = new Cinnamon.Stack();
+        this.actor.add_actor(stack);
         
         this.scrollBox = new St.ScrollView();
         this.scrollBox.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER);
         this.scrollBox.set_auto_scrolling(true);
-        this.actor.add(this.scrollBox, {expand: true});
+        stack.add_actor(this.scrollBox);
         this.adjustment = this.scrollBox.hscroll.adjustment;
         
         this.tabContainer = new St.BoxLayout({vertical: this.isVertical});
         this.scrollBox.add_actor(this.tabContainer);
         
-        this.forwardButton = new St.Button({label: ">", name:"navButton"});
-        this.actor.add_actor(this.forwardButton);
+        let scrollButtonBox = new St.BoxLayout();
+        stack.add_actor(scrollButtonBox);
+        
+        this.backButton = new St.Button({label: "<", style_class: "devtools-tab-scrollButton"});
+        scrollButtonBox.add_actor(this.backButton);
+        this.backButton.connect("clicked", Lang.bind(this, this.scrollBack));
+        
+        scrollButtonBox.add(new St.Bin(), { expand: true });
+        
+        this.forwardButton = new St.Button({label: ">", style_class: "devtools-tab-scrollButton"});
+        scrollButtonBox.add_actor(this.forwardButton);
         this.forwardButton.connect("clicked", Lang.bind(this, this.scrollForward));
         
-        this.adjustment.connect("notify::value", Lang.bind(this, this.updateScrollbuttonVisibility));
+        this.scrollBox.connect("scroll-event", Lang.bind(this, this.updateScrollbuttonVisibility));
         this.updateScrollbuttonVisibility();
     },
     
@@ -285,19 +294,11 @@ ScrolledTabBox.prototype = {
             return;
         }
         
-        this.forwardButton.show();
-        this.backButton.show();
+// global.logWarning("adj: "+this.adjustment.value);
+        if ( this.adjustment.value <= 0 ) this.backButton.hide();
+        else this.backButton.show();
         
-//global.logWarning("adj: "+this.adjustment.value);
-        if (this.adjustment.value == 0) {
-            this.forwardButton.set_reactive(true);
-            this.backButton.set_reactive(false);
-        } else if (this.adjustment.value == width - this.scrollBox.width) {
-            this.forwardButton.set_reactive(false);
-            this.backButton.set_reactive(true);
-        } else {
-            this.forwardButton.set_reactive(true);
-            this.backButton.set_reactive(true);
-        }
+        if (this.adjustment.value >= width - this.scrollBox.width) this.forwardButton.hide();
+        else this.forwardButton.show();
     }
 }

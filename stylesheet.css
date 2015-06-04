@@ -68,6 +68,13 @@
     background-color: #99eeaa;
 }
 
+.devtools-tab-scrollButton {
+    border: solid 1px #555555;
+    border-radius: 5px;
+    padding: 4px;
+    background-color: #efefef;
+}
+
 .devtools-tabPanels {
     
 }
