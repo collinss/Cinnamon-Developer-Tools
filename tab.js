@@ -69,6 +69,9 @@ TabManager.prototype = {
         this.selectedIndex = index;
         if ( this.selectedIndex >= 0 ) this.items[index].tabObject.setSelect(true);
         
+        this.tabArea.onSelected(this, this.items[index]);
+        this.emit("selection-changed");
+        
         return true;
     },
     
@@ -84,6 +87,7 @@ TabManager.prototype = {
         this.selectIndex(0);
     }
 }
+Signals.addSignalMethods(TabManager.prototype);
 
 function TabItemBase() {
     this._init.apply(this, arguments);
@@ -216,6 +220,10 @@ TabBoxBase.prototype = {
     
     removeTab: function(tabActor) {
         this.actor.remove_actor(tabActor);
+    },
+    
+    onSelected: function(tabManager, selected) {
+        // implemented by subclasses as needed
     }
 }
 
@@ -257,20 +265,17 @@ ScrolledTabBox.prototype = {
         
         this.adjustment.connect("changed", Lang.bind(this, this.updateScrollbuttonVisibility));
         this.adjustment.connect("notify::value", Lang.bind(this, this.updateScrollbuttonVisibility));
-        this.updateScrollbuttonVisibility();
+        this.queScrollButtonUpdate();
     },
     
     addTab: function(tabActor) {
         this.tabContainer.add_actor(tabActor);
-        if (!this.updateQueued) {
-            Mainloop.idle_add(Lang.bind(this, this.updateScrollbuttonVisibility));
-            this.updateQueued = true;
-        }
+        this.queScrollButtonUpdate();
     },
     
     removeTab: function(tabActor) {
         this.tabContainer.remove_actor(tabActor);
-        this.updateScrollbuttonVisibility();
+        this.queScrollButtonUpdate();
     },
     
     scrollBack: function() {
@@ -279,6 +284,12 @@ ScrolledTabBox.prototype = {
     
     scrollForward: function() {
         this.adjustment.set_value(this.adjustment.value + this.adjustment.step_increment);
+    },
+    
+    queScrollButtonUpdate: function() {
+        if (this.updateQueued) return;
+        this.updateQueued = true;
+        Mainloop.idle_add(Lang.bind(this,this.updateScrollbuttonVisibility));
     },
     
     updateScrollbuttonVisibility: function() {
@@ -296,5 +307,24 @@ ScrolledTabBox.prototype = {
         
         if (this.adjustment.value >= innerWidth - scrollWidth) this.forwardButton.hide();
         else this.forwardButton.show();
+    },
+    
+    onSelected: function(tabManager, selected) {
+        Mainloop.idle_add(Lang.bind(this, this.setVisible, selected.tabObject.tab));
+    },
+    
+    setVisible: function(actor) {
+        let allocation = actor.allocation;
+        
+        if (allocation.x1 < this.adjustment.value) {
+            if (allocation.x1 == 0) this.adjustment.value = 0;
+            else this.adjustment.value = allocation.x1 - this.backButton.width - 5;
+        }
+        else if (allocation.x2 > this.adjustment.value + this.scrollBox.allocation.get_width() ) {
+            if (allocation.x2 == this.tabContainer.get_preferred_width(0)) 
+                this.adjustment.value = this.tabContainer.get_preferred_width(0) - this.scrollBox.allocation.get_width();
+            else this.adjustment.value = allocation.x2 - this.scrollBox.allocation.get_width() + this.forwardButton.width + 5;
+        }
+        this.queScrollButtonUpdate();
     }
 }
