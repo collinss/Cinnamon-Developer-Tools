@@ -511,17 +511,17 @@ InspectInterface.prototype = {
         let typeLabel = new St.Label({ text: type, min_width: 80 });
         this.propertiesTable.add(typeLabel, { row: this.propRowIndex, col: 1 });
         
-        let value;
+        let text;
         let [longText, shortText] = this.getObjectText(value,type);
         if ( INSPECTABLE_TYPES.indexOf(type) == -1 ) {
-            value = new St.Label({ text: shortText, reactive: true });
-            new Tooltips.Tooltip(value, longText);
+            text = new St.Label({ text: shortText, reactive: true });
+            new Tooltips.Tooltip(text, longText);
         }
         else {
-            value = new InspectButton(value, shortText).actor;
-            new Tooltips.Tooltip(value, "Inspect "+longText);
+            text = new InspectButton(text, shortText).actor;
+            new Tooltips.Tooltip(text, "Inspect "+longText);
         }
-        this.propertiesTable.add(value, { row: this.propRowIndex, col: 2, x_expand: false, x_align: St.Align.START });
+        this.propertiesTable.add(text, { row: this.propRowIndex, col: 2, x_expand: false, x_align: St.Align.START });
         
         this.propRowIndex++;
     },
