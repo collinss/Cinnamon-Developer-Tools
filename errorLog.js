@@ -7,9 +7,8 @@ const Pango = imports.gi.Pango;
 const St = imports.gi.St;
 const Lang = imports.lang;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const TabPanel = imports.tabPanel;
-const Text = imports.text;
+const TabPanel = imports.desklet.tabPanel;
+const Text = imports.desklet.text;
 
 const CINNAMON_LOG_REFRESH_TIMEOUT = 1;
 const XSESSION_LOG_REFRESH_TIMEOUT = 10;

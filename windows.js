@@ -4,8 +4,7 @@ const Cinnamon = imports.gi.Cinnamon;
 const St = imports.gi.St;
 const Lang = imports.lang;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const TabPanel = imports.tabPanel;
+const TabPanel = imports.desklet.tabPanel;
 
 
 let controller;

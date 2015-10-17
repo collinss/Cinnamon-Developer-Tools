@@ -10,9 +10,8 @@ const Util = imports.misc.util;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const TabPanel = imports.tabPanel;
-const CollapseButton = imports.collapseButton;
+const TabPanel = imports.desklet.tabPanel;
+const CollapseButton = imports.desklet.collapseButton;
 
 
 function CommandItem(command, pId, inId, outId, errId, output) {

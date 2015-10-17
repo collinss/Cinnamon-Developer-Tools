@@ -10,11 +10,9 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 const FileDialog = imports.misc.fileDialog;
 
-const DESKLET_PATH = imports.ui.deskletManager.deskletMeta["devTools@scollins"].path 
-imports.searchPath.push(DESKLET_PATH);
-const Tab = imports.tab;
-const TabPanel = imports.tabPanel;
-const Text = imports.text;
+const Tab = imports.desklet.tab;
+const TabPanel = imports.desklet.tabPanel;
+const Text = imports.desklet.text;
 
 
 function getDefaultParams(path) {

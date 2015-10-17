@@ -1,7 +1,6 @@
 const St = imports.gi.St;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Tab = imports.tab;
+const Tab = imports.desklet.tab;
 
 
 function TabPanelBase(canClose) {

@@ -12,9 +12,8 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const TabPanel = imports.tabPanel;
-const CollapseButton = imports.collapseButton;
+const TabPanel = imports.desklet.tabPanel;
+const CollapseButton = imports.desklet.collapseButton;
 
 
 let controller;

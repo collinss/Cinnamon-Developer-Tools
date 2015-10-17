@@ -17,15 +17,15 @@ const Util = imports.misc.util;
 const Lang = imports.lang;
 const Signals = imports.signals;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const Tab = imports.tab;
-const Sandbox = imports.sandbox;
-const Windows = imports.windows;
-const Extensions = imports.extensions;
-const ErrorLog = imports.errorLog;
-const Terminal = imports.terminal;
-const Inspect = imports.inspect;
-const Text = imports.text;
+// devtools imports
+const Tab = imports.desklet.tab;
+const Sandbox = imports.desklet.sandbox;
+const Windows = imports.desklet.windows;
+const Extensions = imports.desklet.extensions;
+const ErrorLog = imports.desklet.errorLog;
+const Terminal = imports.desklet.terminal;
+const Inspect = imports.desklet.inspect;
+const Text = imports.desklet.text;
 
 //global constants
 const POPUP_MENU_ICON_SIZE = 24;

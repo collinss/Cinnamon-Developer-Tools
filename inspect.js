@@ -10,10 +10,9 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 const Signals = imports.signals;
 
-imports.searchPath.push( imports.ui.appletManager.appletMeta["devTools@scollins"].path );
-const TabPanel = imports.tabPanel;
-const CollapseButton = imports.collapseButton;
-const Windows = imports.windows;
+const TabPanel = imports.desklet.tabPanel;
+const CollapseButton = imports.desklet.collapseButton;
+const Windows = imports.desklet.windows;
 
 const INSPECTABLE_TYPES = ["object","array","map","actor","window","applet","desklet"];
 
