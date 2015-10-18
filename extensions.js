@@ -27,11 +27,13 @@ ExtensionItem.prototype = {
     _init: function(meta, type) {
         try {
             this.meta = meta;
+            this.uuid = meta.uuid;
             this.type = type;
-            let extensionObjs = Extension.objects[meta.uuid]._loadedDefinitions;
+            this.definitions = type.maps.objects[this.uuid]._loadedDefinitions;
             this.instances = [];
-            for( let id in extensionObjs ) this.instances.push(extensionObjs[id]);
+            for( let id in this.definitions ) this.instances.push(this.definitions[id]);
             let maxInstances = meta["max-instances"];
+            if ( maxInstances == -1 ) maxInstances = "Infinite";
             this.isMultiInstance = maxInstances && maxInstances != 1;
             
             this.actor = new St.BoxLayout({ style_class: "devtools-extensions-container" });
@@ -66,7 +68,7 @@ ExtensionItem.prototype = {
             
             //name
             table.add(new St.Label({ text: "Name:   " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
-            let name = new St.Label({ text: meta.name+" ("+meta.uuid+")" });
+            let name = new St.Label({ text: meta.name+" ("+this.uuid+")" });
             table.add(name, { row: 0, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
             //description
@@ -114,7 +116,7 @@ ExtensionItem.prototype = {
                     //highlight button
                     let highlightButton = new St.Button({ label: "Highlight", style_class: "devtools-contentButton" });
                     instanceBox.add_actor(highlightButton);
-                    highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(id, true); }));
+                    highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(id); }));
                     
                     //inspect button
                     let inspectButton = new St.Button({ label: "Inspect", style_class: "devtools-contentButton" });
@@ -132,12 +134,12 @@ ExtensionItem.prototype = {
                 if ( this.type == Extension.Type.APPLET || this.type == Extension.Type.DESKLET ) {
                     let highlightButton = new St.Button({ label: "Highlight", x_align: St.Align.END, style_class: "devtools-contentButton" });
                     buttonBox.add_actor(highlightButton);
-                    highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(meta.uuid, false); }));
+                    highlightButton.connect("clicked", Lang.bind(this, function() { this.highlight(this.uuid); }));
                     
                     //inspect button
                     let inspectButton = new St.Button({ label: "Inspect", x_align: St.Align.END, style_class: "devtools-contentButton" });
                     buttonBox.add_actor(inspectButton);
-                    inspectButton.connect("clicked", Lang.bind(this, this.inspect, meta.uuid));
+                    inspectButton.connect("clicked", Lang.bind(this, this.inspect, this.uuid));
                 }
             }
             
@@ -146,7 +148,7 @@ ExtensionItem.prototype = {
                 let settingsButton = new St.Button({ label: "Settings", x_align: St.Align.END, style_class: "devtools-contentButton" });
                 buttonBox.add_actor(settingsButton);
                 settingsButton.connect("clicked", Lang.bind(this, function() {
-                    Util.spawnCommandLine("cinnamon-settings applets " + meta.uuid);
+                    Util.spawnCommandLine("cinnamon-settings applets " + this.uuid);
                 }));
             }
         } catch(e) {
@@ -155,20 +157,19 @@ ExtensionItem.prototype = {
     },
     
     reload: function() {
-        Extension.unloadExtension(this.meta.uuid);
-        Extension.loadExtension(this.meta.uuid, this.type);
+        Extension.reloadExtension(this.uuid, this.type);
     },
     
     remove: function(id) {
         switch ( this.type ) {
             case Extension.Type.APPLET:
-                AppletManager._removeAppletFromPanel(null, null, null, this.meta.uuid, id);
+                AppletManager._removeAppletFromPanel(null, null, null, this.uuid, id);
                 break;
             case Extension.Type.DESKLET:
-                DeskletManager.removeDesklet(this.meta.uuid, id);
+                DeskletManager.removeDesklet(this.uuid, id);
                 break;
             case Extension.Type.EXTENSION:
-                Extension.unloadExtension(meta.uuid);
+                Extension.unloadExtension(this.uuid);
                 break;
         }
     },
@@ -183,13 +184,12 @@ ExtensionItem.prototype = {
         }
     },
     
-    highlight: function(button, buttonPressed, id) {
+    highlight: function(id) {
         let obj = this.getXletObject(id);
         if ( !obj ) return;
         
         let actor = obj.actor;
         if ( !actor ) return;
-        
         let [x, y] = actor.get_transformed_position();
         let [w, h] = actor.get_transformed_size();
         
@@ -202,14 +202,12 @@ ExtensionItem.prototype = {
     },
     
     getXletObject: function(id) {
-        if ( this.isMultiInstance ) {
-            if ( this.type == Extension.Type.APPLET ) return AppletManager.get_object_for_instance(id);
-            else return DeskletManager.get_object_for_instance(id);
+        if ( !this.isMultiInstance ) {
+            id = Object.keys(this.definitions)[0];
         }
-        else {
-            if ( this.type == Extension.Type.APPLET ) return AppletManager.get_object_for_uuid(id);
-            else return DeskletManager.get_object_for_uuid(id);
-        }
+        
+        if ( this.type == Extension.Type.APPLET ) return AppletManager.appletObj[id];
+        else return DeskletManager.deskletObj[id];
     }
 }
 
@@ -263,15 +261,17 @@ ExtensionInterface.prototype = {
             if ( !this.selected ) return;
             this.extensionBox.destroy_all_children();
             
-            for ( let uuid in Extension.meta ) {
-                let meta = Extension.meta[uuid];
-                
-                if ( !meta.name ) continue;
-                let type = Extension.objects[uuid].type;
-                if ( !type || !this.checkBoxes[type.name].actor.checked ) continue;
-                
-                let extension = new ExtensionItem(meta, type);
-                this.extensionBox.add_actor(extension.actor);
+            for ( let typeName in Extension.Type ) {
+                let type = Extension.Type[typeName];
+                for ( let uuid in type.maps.meta ) {
+                    let meta = type.maps.meta[uuid];
+                    
+                    if ( !meta.name ) continue;
+                    if ( !type || !this.checkBoxes[type.name].actor.checked ) continue;
+                    
+                    let extension = new ExtensionItem(meta, type);
+                    this.extensionBox.add_actor(extension.actor);
+                }
             }
         } catch(e) {
             global.logError(e);
