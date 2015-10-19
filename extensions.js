@@ -67,8 +67,10 @@ ExtensionItem.prototype = {
             infoBox.add(table, { y_align: St.Align.MIDDLE, y_expand: false });
             
             //name
+            let nameString = meta.name;
+            if ( meta.version ) nameString += " " + meta.version;
             table.add(new St.Label({ text: "Name:   " }), { row: 0, col: 0, col_span: 1,  x_expand: false, x_align: St.Align.START });
-            let name = new St.Label({ text: meta.name+" ("+this.uuid+")" });
+            let name = new St.Label({ text: nameString + "        (" + this.uuid + ")", style: "color: blue;" });
             table.add(name, { row: 0, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
             
             //description
@@ -77,10 +79,27 @@ ExtensionItem.prototype = {
             table.add(description, { row: 1, col: 1, col_span: 1, y_expand: true, x_expand: false, x_align: St.Align.START });
             description.set_text(meta.description);
             
+            //path
+            table.add(new St.Label({ text: "Path:   " }), { row: 2, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
+            let path = new St.Label({ text: meta.path });
+            table.add(path, { row: 2, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
+            
             //status
-            table.add(new St.Label({ text: "Status:   " }), { row: 2, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
+            table.add(new St.Label({ text: "Status:   " }), { row: 3, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START });
             let status = new St.Label({ text: Extension.getMetaStateString(meta.state) });
-            table.add(status, { row: 2, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
+            table.add(status, { row: 3, col: 1, col_span: 1, x_expand: false, x_align: St.Align.START });
+            switch ( meta.state ) {
+                case Extension.State.INITIALIZING:
+                    status.style = "color: yellow;";
+                    break;
+                case Extension.State.LOADED:
+                    status.style = "color: green;";
+                    break;
+                case Extension.State.ERROR:
+                case Extension.State.OUT_OF_DATE:
+                    status.style = "color: red;";
+                    break;
+            }
             
             /*extension options*/
             let buttonBox = new St.BoxLayout({ vertical:true, style_class: "devtools-extensions-buttonBox" });
@@ -99,7 +118,7 @@ ExtensionItem.prototype = {
             /*check for multi-instance*/
             if ( this.isMultiInstance ) {
                 let instanceDropdown = new CollapseButton.CollapseButton("Instances: "+this.instances.length+" of "+maxInstances, false, null);
-                table.add(instanceDropdown.actor, { row: 3, col: 0, col_span: 2, x_expand: false, x_align: St.Align.START });
+                table.add(instanceDropdown.actor, { row: 4, col: 0, col_span: 2, x_expand: false, x_align: St.Align.START });
                 
                 let instancesContainer = new St.BoxLayout({ vertical: true });
                 instanceDropdown.setChild(instancesContainer);
